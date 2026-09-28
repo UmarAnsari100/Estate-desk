@@ -1,0 +1,40 @@
+{
+  "name": "estate-assistant",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "tsx scripts/dev.mts",
+    "build": "npm run build -w server && npm run build -w client",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test -w server",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:dev": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "admin:reset": "tsx scripts/reset-admin.mts",
+    "import:ideasgroup": "tsx scripts/import-ideasgroup.mts",
+    "format": "prettier --write client/src server/src server/tests prisma/seed.ts *.json *.md docs/*.md",
+    "test:integration": "tsx scripts/integration.mts",
+    "test:browser": "node scripts/browser-smoke.mjs",
+    "test:first-run": "node scripts/first-run-smoke.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.2.0",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "prettier": "^3.9.9",
+    "prisma": "^6.19.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0"
+  }
+}

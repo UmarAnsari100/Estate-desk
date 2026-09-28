@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  WAITING
+  CLOSED
+}
+
+enum Purpose {
+  SALE
+  RENT
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  RENTED
+  INACTIVE
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFYING
+  QUALIFIED
+  VIEWING_REQUESTED
+  FOLLOW_UP
+  WON
+  LOST
+}
+
+model Admin {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  conversations Conversation[]
+}
+
+model Customer {
+  id             String         @id @default(cuid())
+  name           String
+  whatsappNumber String         @unique
+  email          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  conversations  Conversation[]
+  leads          Lead[]
+}
+
+model Conversation {
+  id              String             @id @default(cuid())
+  customerId      String
+  customer        Customer           @relation(fields: [customerId], references: [id])
+  status          ConversationStatus @default(ACTIVE)
+  aiEnabled       Boolean            @default(true)
+  humanTakeover   Boolean            @default(false)
+  assignedAdminId String?
+  assignedAdmin   Admin?             @relation(fields: [assignedAdminId], references: [id])
+  lastMessageAt   DateTime           @default(now())
+  lastInboundAt   DateTime?
+  unread          Int                @default(0)
+  simulated       Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  messages        Message[]
+  lead            Lead?
+  viewings        ViewingRequest[]
+
+  @@unique([customerId, simulated])
+}
+
+model Message {
+  id                String         @id @default(cuid())
+  conversationId    String
+  conversation      Conversation   @relation(fields: [conversationId], references: [id])
+  whatsappMessageId String?        @unique
+  replyToId         String?        @unique
+  direction         String
+  sender            String
+  type              String         @default("text")
+  content           String
+  status            String         @default("RECEIVED")
+  metadata          Json?
+  createdAt         DateTime       @default(now())
+  job               ProcessingJob?
+
+  @@index([conversationId, createdAt])
+}
+
+model ProcessingJob {
+  id        String   @id @default(cuid())
+  messageId String   @unique
+  message   Message  @relation(fields: [messageId], references: [id])
+  status    String   @default("PENDING")
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model Property {
+  id               String           @id @default(cuid())
+  propertyCode     String           @unique
+  title            String
+  purpose          Purpose
+  propertyType     String
+  location         String
+  city             String
+  area             Decimal          @db.Decimal(12, 2)
+  areaUnit         String
+  bedrooms         Int?
+  bathrooms        Int?
+  price            Decimal          @db.Decimal(16, 2)
+  currency         String           @default("PKR")
+  description      String
+  amenities        String[]
+  images           String[]
+  status           PropertyStatus   @default(AVAILABLE)
+  featured         Boolean          @default(false)
+  demo             Boolean          @default(false)
+  sourceUrl        String?
+  sourceRepository String?
+  sourceRevision   String?
+  sourceReference  String?
+  sourceUpdatedAt  DateTime?
+  pricingDetails   Json?
+  requiresReview   Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  leads            Lead[]
+  viewings         ViewingRequest[]
+
+  @@index([status, purpose, city, price])
+  @@index([sourceRepository])
+}
+
+model Lead {
+  id                   String       @id @default(cuid())
+  customerId           String
+  customer             Customer     @relation(fields: [customerId], references: [id])
+  conversationId       String       @unique
+  conversation         Conversation @relation(fields: [conversationId], references: [id])
+  name                 String?
+  phone                String
+  purpose              Purpose?
+  propertyType         String?
+  preferredLocation    String?
+  city                 String?
+  minimumBudget        Decimal?     @db.Decimal(16, 2)
+  maximumBudget        Decimal?     @db.Decimal(16, 2)
+  preferredArea        Decimal?     @db.Decimal(12, 2)
+  areaUnit             String?
+  bedrooms             Int?
+  preferredVisitDate   String?
+  interestedPropertyId String?
+  interestedProperty   Property?    @relation(fields: [interestedPropertyId], references: [id])
+  status               LeadStatus   @default(NEW)
+  score                Int?
+  notes                String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+model ViewingRequest {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  propertyId     String?
+  property       Property?    @relation(fields: [propertyId], references: [id])
+  requestedDate  String?
+  preferredTime  String?
+  customerName   String?
+  status         String       @default("REQUESTED")
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model BusinessSettings {
+  id                 String   @id @default("singleton")
+  companyName        String   @default("Estate Desk")
+  description        String   @default("")
+  phone              String   @default("")
+  email              String   @default("")
+  officeAddress      String   @default("")
+  website            String   @default("")
+  businessHours      String   @default("")
+  defaultGreeting    String   @default("Hello! How can we help you find a property?")
+  supportedLanguages String[] @default(["English", "Urdu", "Roman Urdu"])
+}
+
+model AISettings {
+  id                     String  @id @default("singleton")
+  enabled                Boolean @default(true)
+  personality            String  @default("Friendly and professional")
+  instructions           String  @default("")
+  defaultLanguage        String  @default("English")
+  humanEscalationRules   String  @default("")
+  maxConversationHistory Int     @default(20)
+  temperature            Float   @default(0.2)
+}
