@@ -2,60 +2,63 @@ import { Lead, Property } from "@prisma/client";
 const phrases = {
   English: {
     welcome:
-      "Hello! I'm doing well, thank you. How can I help with your property search?",
-    qualify: "Got it — let me narrow that down.",
-    matches: "These properties match your requirements:",
+      "Hello 👋 Looking for a property? Tell me whether you're interested in buying, renting, or investing and I'll help you from there.",
+    qualify: "Got it 👍",
+    matches: "Here are the matching options:",
     preview:
-      "Preview from published pricing — current availability must be confirmed by a property consultant:",
+      "Here is the published preview (current availability to be confirmed by our consultant):",
     none: "No exact match is currently available. Would you like to explore similar options?",
-    escalate: "A property consultant will need to confirm that for you.",
+    escalate:
+      "Bilkul 👍 Main aapki requirement agent ke liye note kar deta hoon so they can assist you further.",
     viewing:
-      "Your viewing request has been recorded, but is not confirmed. Please share the property code, your name, preferred date and time.",
-    budget: "What is your approximate budget?",
-    location: "Which location do you prefer?",
-    type: "What type of property are you looking for?",
-    area: "What property size do you prefer?",
+      "Your viewing request has been recorded, but is not confirmed. Our property consultant will contact you to confirm the date and time.",
+    budget: "Approx budget kitna rakh rahe hain?",
+    location: "Kis area ya sector mein dekh rahe hain?",
+    type: "What are you looking for — house, plot, apartment, or commercial property?",
+    area: "What property size do you prefer — 5, 8, 10 marla, kanal, or something else?",
     name: "May I have your name?",
-    time: "What date and time would you prefer?",
-    follow: "How else can I help with your property search?",
+    time: "What date and time would work best for a visit?",
+    follow: "What else can I help you find?",
   },
   "Roman Urdu": {
     welcome:
-      "Walaikum assalam! Main theek hoon, shukriya. Aap ko kis tarah ki property chahiye?",
-    qualify: "Theek hai — isay thora aur narrow kar lete hain.",
+      "Wa Alaikum Assalam 👋 Bilkul, batayein aap kis type ki property dekh rahe hain — house, plot, apartment ya commercial?",
+    qualify: "Got it 👍",
     matches: "Aap ki requirements ke mutabiq ye options hain:",
     preview:
-      "Published pricing ka preview — current availability property consultant se confirm karna zaroori hai:",
-    none: "Filhal exact match available nahi hai. Kya aap similar options dekhna chahenge?",
-    escalate: "Is ki tasdeeq ke liye property consultant aap ki madad karega.",
+      "Published pricing ka preview ye hai (availability consultant se confirm hogi):",
+    none: "Filhal exact match available nahi hai. Kya similar options dekhna chahenge?",
+    escalate:
+      "Bilkul 👍 Main aapki requirement agent ke liye note kar deta hoon so they can assist you further.",
     viewing:
-      "Aap ki visit request note kar li hai, abhi confirm nahi hui. Property code, apna naam, tareekh aur waqt bata dein.",
-    budget: "Aap ka approx budget kitna hai?",
-    location: "Aap kis location ko prefer karte hain?",
-    type: "Aap ko kis qisam ki property chahiye?",
-    area: "Kitni size ki property chahiye?",
+      "Aap ki visit request note kar li hai. Consultant exact timing confirm karne ke liye aapse rabta karega.",
+    budget: "Approx budget kitna rakh rahe hain?",
+    location: "Kis area ya sector mein dekh rahe hain?",
+    type: "Kis type ki property dekh rahe hain — house, plot, apartment ya commercial?",
+    area: "Size preference kya hai — 5, 8, 10 marla ya koi aur?",
     name: "Aap ka naam?",
-    time: "Kis din aur waqt visit karna chahenge?",
-    follow: "Property search mein aur kya madad chahiye?",
+    time: "Kis din aur time visit karna chahenge?",
+    follow: "Aur kis cheez mein help chahiye?",
   },
   Urdu: {
     welcome:
-      "وعلیکم السلام! میں خیریت سے ہوں، شکریہ۔ آپ کو کس قسم کی پراپرٹی چاہیے؟",
-    qualify: "ٹھیک ہے، اسے مزید واضح کر لیتے ہیں۔",
-    matches: "آپ کی ضروریات کے مطابق یہ پراپرٹیز موجود ہیں:",
+      "وعلیکم السلام 👋 بالکل، بتائیں آپ کس قسم کی پراپرٹی دیکھ رہے ہیں — گھر، پلاٹ، اپارٹمنٹ یا کمرشل؟",
+    qualify: "ٹھیک ہے 👍",
+    matches: "آپ کی ضروریات کے مطابق یہ آپشنز موجود ہیں:",
     preview:
-      "شائع شدہ قیمتوں کا پیش منظر — موجودہ دستیابی کی تصدیق پراپرٹی کنسلٹنٹ سے ضروری ہے:",
+      "شائع شدہ پیش منظر (دستیابی کی تصدیق کنسلٹنٹ سے ہوگی):",
     none: "فی الحال عین مطابق پراپرٹی دستیاب نہیں۔ کیا آپ ملتے جلتے آپشنز دیکھنا چاہیں گے؟",
-    escalate: "اس کی تصدیق کے لیے پراپرٹی کنسلٹنٹ آپ کی مدد کرے گا۔",
+    escalate:
+      "بالکل 👍 میں آپ کی تفصیلات ایجنٹ کے لیے نوٹ کر دیتا ہوں تاکہ وہ آپ سے رابطہ کر سکے۔",
     viewing:
-      "آپ کی وزٹ کی درخواست درج کر لی ہے، ابھی تصدیق نہیں ہوئی۔ پراپرٹی کوڈ، نام، تاریخ اور وقت بتا دیں۔",
-    budget: "آپ کا بجٹ کتنا ہے؟",
-    location: "آپ کون سا علاقہ پسند کریں گے؟",
-    type: "کس قسم کی پراپرٹی چاہیے؟",
-    area: "کتنے رقبے کی پراپرٹی چاہیے؟",
+      "آپ کی وزٹ کی درخواست نوٹ کر لی ہے۔ کنسلٹنٹ وقت کی تصدیق کے لیے رابطہ کرے گا۔",
+    budget: "تقریباً بجٹ کتنا ہے؟",
+    location: "کس علاقے یا سیکٹر میں دیکھ رہے ہیں؟",
+    type: "کس قسم کی پراپرٹی چاہیے — گھر، پلاٹ، اپارٹمنٹ یا کمرشل؟",
+    area: "کتنے رقبے کی پراپرٹی چاہیے — 5، 10 مرلہ یا کچھ اور؟",
     name: "آپ کا نام کیا ہے؟",
     time: "کس تاریخ اور وقت وزٹ کرنا چاہیں گے؟",
-    follow: "پراپرٹی کی تلاش میں مزید کیا مدد چاہیے؟",
+    follow: "پراپرٹی تلاش میں مزید کیا مدد چاہیے؟",
   },
 };
 export function renderResponse(
