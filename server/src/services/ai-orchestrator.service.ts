@@ -21,7 +21,7 @@ import { env } from "../config/env.js";
 export function startsNewSearch(text: string) {
   const signals = [
     /\b(house|home|plot|apartment|flat|commercial|shop|office)\b/i,
-    /\b(?:sector\s*)?[a-z]\s*[- ]?\s*\d{1,2}\b|\b(bahria|dha|islamabad|rawalpindi|lahore|karachi)\b/i,
+    /\b(?:sector\s+[a-z]\s*[- ]?\s*\d{1,2}|[b-i]\s*-\s*\d{1,2}|[b-i]\d{1,2})\b|\b(bahria|dha|islamabad|rawalpindi|lahore|karachi)\b/i,
     /\b\d+(?:\.\d+)?\s*(crore|cr|lakh|lac|million)\b/i,
     /\b\d+\s*[- ]?(bed|bedroom)|\b\d+(?:\.\d+)?\s*(marla|kanal|sq\.?\s*ft)\b/i,
   ].filter((pattern) => pattern.test(text)).length;
@@ -50,6 +50,12 @@ export async function processMessage(messageId: string) {
   });
   if (!aiAllowed(c, settings.enabled)) return;
   if (message.type !== "text") {
+    await sendReply(
+      c.id,
+      "Thank you for your message. Currently our automated assistant can best help with text messages. A property consultant has been notified and will assist you shortly.",
+      "AI",
+      message.id,
+    );
     await db.conversation.update({
       where: { id: c.id },
       data: { status: "WAITING", humanTakeover: true },

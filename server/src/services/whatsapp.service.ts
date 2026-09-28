@@ -16,7 +16,7 @@ export class WhatsAppService {
         body: JSON.stringify({
           messaging_product: "whatsapp",
           recipient_type: "individual",
-          to: phoneNumber,
+          to: phoneNumber.replace(/^\+/, "").replace(/[\s-]/g, ""),
           type: "text",
           text: { preview_url: false, body: message },
         }),
@@ -28,7 +28,12 @@ export class WhatsAppService {
         502,
         `WhatsApp send failed (HTTP ${response.status}); review delivery before retrying`,
       );
-    const body = (await response.json()) as { messages?: { id: string }[] };
+    let body: { messages?: { id: string }[] } = {};
+    try {
+      body = (await response.json()) as { messages?: { id: string }[] };
+    } catch {
+      throw new AppError(502, "WhatsApp returned non-JSON response");
+    }
     if (!body.messages?.[0]?.id)
       throw new AppError(502, "WhatsApp returned no message identifier");
     return body.messages[0].id;

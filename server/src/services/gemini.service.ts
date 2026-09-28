@@ -134,12 +134,19 @@ export function mockAnalysis(text: string): Analysis {
   const city = text.match(
     /\b(islamabad|rawalpindi|lahore|karachi|faisalabad|multan|peshawar)\b/i,
   )?.[1];
-  const sector = text
-    .match(
-      /\b(?:sector\s*)?([a-z]\s*[- ]?\s*\d{1,2}(?:\s*[- ]?\s*\d{1,2})?)\b/i,
-    )?.[1]
+  const sectorMatch = text.match(
+    /\b(?:sector\s+([a-z]\s*[- ]?\s*\d{1,2}(?:[-/]\d{1,2})?)|([b-i]\s*-\s*\d{1,2}(?:[-/]\d{1,2})?)|([b-i]\d{1,2}(?:[-/]\d{1,2})?))\b/i,
+  );
+  let sector = (
+    sectorMatch?.[1] ||
+    sectorMatch?.[2] ||
+    sectorMatch?.[3]
+  )
     ?.replace(/\s/g, "")
     .toUpperCase();
+  if (sector) {
+    sector = sector.replace(/^([B-I])(\d{1,2})/, "$1-$2");
+  }
   const propertyType = /\b(plot|plots)\b/i.test(text)
     ? "PLOT"
     : /\b(apartment|apartments|flat|flats)\b/i.test(text)
@@ -161,14 +168,20 @@ export function mockAnalysis(text: string): Analysis {
     : 0;
   const plainBudget = text
     .trim()
-    .match(/^(?:(?:pkr|rs\.?|rupees?)\s*)?([\d,]{6,13})\s*$/i);
+    .match(
+      /(?:^|budget\s*(?:is|hai|around)?\s*|under\s+|within\s+|max\s+)?(?:(?:pkr|rs\.?|rupees?)\s*)?([1-9]\d{5,9}|[1-9]\d{0,2}(?:,\d{3}){1,3})\b/i,
+    );
   const explicitBudget = amount
     ? Number(amount[1]) * multiplier
     : plainBudget
       ? Number(plainBudget[1].replace(/,/g, ""))
       : null;
+  const wantsAgent =
+    /agent|human|person|call(?:\s+me)?|band[ae]|representative|(?:no|not|don'?t\s+want)\s+ai/i.test(
+      text,
+    );
   return {
-    intent: /agent|human|person/i.test(text)
+    intent: wantsAgent
       ? "TALK_TO_AGENT"
       : /visit|viewing|tomorrow/i.test(text)
         ? "SCHEDULE_VIEWING"
@@ -180,7 +193,9 @@ export function mockAnalysis(text: string): Analysis {
       : /[\u0600-\u06ff]/.test(text)
         ? "Urdu"
         : "English",
-    escalate: /agent|human|legal|negotiate|complaint|confirm|angry/i.test(text),
+    escalate:
+      wantsAgent ||
+      /legal|negotiate|complaint|confirm|angry/i.test(text),
     propertyCode: text.match(/DEMO-\d+/i)?.[0]?.toUpperCase() || null,
     preferredTime: null,
     lead: {

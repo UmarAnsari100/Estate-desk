@@ -28,8 +28,28 @@ export const env = z
       .default("v23.0"),
   })
   .parse(process.env);
-if (
-  env.NODE_ENV === "production" &&
-  (env.MOCK_MODE || env.JWT_SECRET.startsWith("replace-"))
-)
-  throw new Error("Unsafe production configuration");
+if (env.NODE_ENV === "production") {
+  if (env.MOCK_MODE) {
+    throw new Error("MOCK_MODE must be false in production");
+  }
+  if (env.JWT_SECRET.startsWith("replace-") || env.JWT_SECRET.length < 32) {
+    throw new Error(
+      "JWT_SECRET must be a secure random secret of at least 32 characters in production",
+    );
+  }
+  if (!env.WHATSAPP_APP_SECRET) {
+    throw new Error("WHATSAPP_APP_SECRET is required in production");
+  }
+  if (!env.WHATSAPP_ACCESS_TOKEN) {
+    throw new Error("WHATSAPP_ACCESS_TOKEN is required in production");
+  }
+  if (!env.WHATSAPP_PHONE_NUMBER_ID) {
+    throw new Error("WHATSAPP_PHONE_NUMBER_ID is required in production");
+  }
+  if (!env.WHATSAPP_VERIFY_TOKEN) {
+    throw new Error("WHATSAPP_VERIFY_TOKEN is required in production");
+  }
+  if (!env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is required in production");
+  }
+}

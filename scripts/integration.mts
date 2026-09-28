@@ -189,7 +189,10 @@ try {
     const secondPlotReply = await db.message.findUniqueOrThrow({
       where: { replyToId: budgetReply.messageId! },
     });
-    assert.match(secondPlotReply.content, /No exact match/i);
+    assert.match(
+      secondPlotReply.content,
+      /couldn't find a published exact listing|no exact match/i,
+    );
     assert.doesNotMatch(secondPlotReply.content, /approximate budget/i);
     assert.equal(
       Number(

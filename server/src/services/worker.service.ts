@@ -1,5 +1,6 @@
 import { db } from "../repositories/db.js";
 import { processMessage } from "./ai-orchestrator.service.js";
+import { sendReply } from "./message.service.js";
 import { logger } from "../utils/logger.js";
 let stopping = false;
 export function stopWorker() {
@@ -51,9 +52,12 @@ export async function runWorker() {
             },
             data: { status: "RESOLVED", error: null },
           });
-        } catch {
+        } catch (error) {
           logger.error(
-            { jobId: job.id },
+            {
+              jobId: job.id,
+              error: error instanceof Error ? error.message : "Unknown",
+            },
             "AI processing failed; human review required",
           );
           await db.processingJob.update({
@@ -67,6 +71,19 @@ export async function runWorker() {
           const m = await db.message.findUniqueOrThrow({
             where: { id: job.messageId },
           });
+          try {
+            await sendReply(
+              m.conversationId,
+              "Sorry, I'm having trouble processing that right now. A member of our team has been notified and will assist you shortly.",
+              "AI",
+              m.id,
+            );
+          } catch (replyErr) {
+            logger.warn(
+              { error: replyErr },
+              "Could not send fallback reply to customer",
+            );
+          }
           await db.conversation.update({
             where: { id: m.conversationId },
             data: { humanTakeover: true, status: "WAITING" },
