@@ -57,7 +57,9 @@ const payloadSchema = z.object({
                   timestamp: z.coerce.string().regex(/^\d+$/),
                   type: z.string(),
                   text: z
-                    .object({ body: z.string().max(10000).optional().default("") })
+                    .object({
+                      body: z.string().max(10000).optional().default(""),
+                    })
                     .optional(),
                 }),
               )

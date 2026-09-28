@@ -20,16 +20,22 @@ import { env } from "../config/env.js";
 
 export function startsNewSearch(text: string) {
   const signals = [
-    /\b(house|home|plot|apartment|flat|commercial|shop|office)\b/i,
+    /\b(property|house|home|plot|apartment|flat|commercial|shop|office)\b/i,
     /\b(?:sector\s+[a-z]\s*[- ]?\s*\d{1,2}|[b-i]\s*-\s*\d{1,2}|[b-i]\d{1,2})\b|\b(bahria|dha|islamabad|rawalpindi|lahore|karachi)\b/i,
     /\b\d+(?:\.\d+)?\s*(crore|cr|lakh|lac|million)\b/i,
     /\b\d+\s*[- ]?(bed|bedroom)|\b\d+(?:\.\d+)?\s*(marla|kanal|sq\.?\s*ft)\b/i,
   ].filter((pattern) => pattern.test(text)).length;
   return (
     signals >= 2 &&
-    /\b(i need|i want|i am looking|i'm looking|looking for|find me|mujhe|chahiye)\b/i.test(
+    /\b(i need|i want|i am looking|i'm looking|looking for|find me|mujhe|chahiye|chahye|chahie)\b/i.test(
       text,
     )
+  );
+}
+
+export function asksForPropertyDetails(text: string) {
+  return /\b(yes|yeah|yep|sure|ok|okay|please|show|details|g|ji|bilkul|haan|ha|batao|dikhao|want to see|dekhna|send|share)\b/i.test(
+    text,
   );
 }
 
@@ -173,6 +179,63 @@ export async function processMessage(messageId: string) {
         message.id,
       );
     }
+    return;
+  }
+  const lastAiMessage = history.find(
+    (item) => item.sender === "AI" && item.id !== message.id,
+  );
+  const offeredAlternativeInLastReply =
+    lastAiMessage &&
+    /details dekhna chahenge|would you like its details|would you like to see|تفصیل دیکھنا چاہیں/i.test(
+      lastAiMessage.content,
+    );
+  if (offeredAlternativeInLastReply && asksForPropertyDetails(message.content)) {
+    const candidates = await db.property.findMany({
+      where: {
+        demo: false,
+        OR: [
+          { status: "AVAILABLE" },
+          { status: "INACTIVE", requiresReview: true },
+        ],
+      },
+    });
+    const offered = candidates.find(
+      (property) =>
+        lastAiMessage.content.includes(property.title) ||
+        lastAiMessage.content.includes(property.propertyCode),
+    );
+    if (offered) {
+      await db.lead.update({
+        where: { conversationId: c.id },
+        data: {
+          interestedPropertyId: offered.id,
+          propertyType: offered.propertyType,
+          preferredLocation: offered.location,
+          city: offered.city,
+        },
+      });
+      const language = mockAnalysis(message.content).language;
+      await sendReply(
+        c.id,
+        renderResponse(language, "SEARCH", [offered], "NONE", true),
+        "AI",
+        message.id,
+      );
+      return;
+    }
+  }
+  if (
+    offeredAlternativeInLastReply &&
+    /\b(no|nah|nope|nahi|nahin|mat|don'?t)\b/i.test(message.content)
+  ) {
+    const language = mockAnalysis(message.content).language;
+    const declineReply =
+      language === "Urdu"
+        ? "ٹھیک ہے، کوئی بات نہیں۔ آپ کس علاقے، بجٹ یا پراپرٹی کی قسم میں تلاش کرنا چاہیں گے؟"
+        : language === "Roman Urdu"
+          ? "Theek hai, koi baat nahi. Aap kis location, budget ya property type mein search karna chahenge?"
+          : "Understood. What location, budget, or property type would you prefer to explore instead?";
+    await sendReply(c.id, declineReply, "AI", message.id);
     return;
   }
   const resetSearch = startsNewSearch(message.content);

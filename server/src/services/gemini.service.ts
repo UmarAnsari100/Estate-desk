@@ -137,11 +137,7 @@ export function mockAnalysis(text: string): Analysis {
   const sectorMatch = text.match(
     /\b(?:sector\s+([a-z]\s*[- ]?\s*\d{1,2}(?:[-/]\d{1,2})?)|([b-i]\s*-\s*\d{1,2}(?:[-/]\d{1,2})?)|([b-i]\d{1,2}(?:[-/]\d{1,2})?))\b/i,
   );
-  let sector = (
-    sectorMatch?.[1] ||
-    sectorMatch?.[2] ||
-    sectorMatch?.[3]
-  )
+  let sector = (sectorMatch?.[1] || sectorMatch?.[2] || sectorMatch?.[3])
     ?.replace(/\s/g, "")
     .toUpperCase();
   if (sector) {
@@ -194,8 +190,7 @@ export function mockAnalysis(text: string): Analysis {
         ? "Urdu"
         : "English",
     escalate:
-      wantsAgent ||
-      /legal|negotiate|complaint|confirm|angry/i.test(text),
+      wantsAgent || /legal|negotiate|complaint|confirm|angry/i.test(text),
     propertyCode: text.match(/DEMO-\d+/i)?.[0]?.toUpperCase() || null,
     preferredTime: null,
     lead: {
