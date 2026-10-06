@@ -875,6 +875,24 @@ td b {
 .settings-form button {
   margin-top: 18px;
 }
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.connection-result {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+.whatsapp-qr {
+  width: min(320px, 100%);
+  height: auto;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
 .setting-row {
   display: flex;
   justify-content: space-between;

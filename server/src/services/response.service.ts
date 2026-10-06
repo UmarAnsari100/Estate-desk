@@ -1,12 +1,12 @@
 import { Lead, Property } from "@prisma/client";
 const phrases = {
   English: {
-    welcome:
-      "Hello 👋 Looking for a property? Tell me whether you're interested in buying, renting, or investing and I'll help you from there.",
+    welcome: "Hello 👋 I'd be happy to help you find a property.",
     qualify: "Got it 👍",
-    matches: "Here are the matching options:",
-    preview:
-      "Here is the published preview (current availability to be confirmed by our consultant):",
+    matches: "I found these options for you:",
+    preview: "I found this published option for you:",
+    alternatives:
+      "Here are more published options. Some may be above your current budget; availability must be confirmed:",
     none: "No exact match is currently available. Would you like to explore similar options?",
     escalate:
       "Bilkul 👍 Main aapki requirement agent ke liye note kar deta hoon so they can assist you further.",
@@ -19,14 +19,16 @@ const phrases = {
     name: "May I have your name?",
     time: "What date and time would work best for a visit?",
     follow: "What else can I help you find?",
+    farewell: "Goodbye! 👋 Feel free to message us whenever you need help with a property.",
+    thanks: "You're welcome 😊 Message me anytime you need help with a property.",
   },
   "Roman Urdu": {
-    welcome:
-      "Wa Alaikum Assalam 👋 Bilkul, batayein aap kis type ki property dekh rahe hain — house, plot, apartment ya commercial?",
+    welcome: "Wa Alaikum Assalam 👋 Bilkul, main property search mein aapki help karunga.",
     qualify: "Got it 👍",
-    matches: "Aap ki requirements ke mutabiq ye options hain:",
-    preview:
-      "Published pricing ka preview ye hai (availability consultant se confirm hogi):",
+    matches: "Aapki requirement ke mutabiq ye options mile hain:",
+    preview: "Aapke liye ye published option mila hai:",
+    alternatives:
+      "Ji, yeh mazeed published options hain. Kuch current budget se above ho sakte hain; availability consultant se confirm hogi:",
     none: "Filhal exact match available nahi hai. Kya similar options dekhna chahenge?",
     escalate:
       "Bilkul 👍 Main aapki requirement agent ke liye note kar deta hoon so they can assist you further.",
@@ -39,14 +41,17 @@ const phrases = {
     name: "Aap ka naam?",
     time: "Kis din aur time visit karna chahenge?",
     follow: "Aur kis cheez mein help chahiye?",
+    farewell: "Allah Hafiz 👋 Property ke hawale se jab bhi help chahiye ho, message kar dein.",
+    thanks: "Khushi hui 😊 Property ke hawale se jab bhi help chahiye ho, message kar dein.",
   },
   Urdu: {
-    welcome:
-      "وعلیکم السلام 👋 بالکل، بتائیں آپ کس قسم کی پراپرٹی دیکھ رہے ہیں — گھر، پلاٹ، اپارٹمنٹ یا کمرشل؟",
+    welcome: "وعلیکم السلام 👋 بالکل، میں پراپرٹی تلاش کرنے میں آپ کی مدد کروں گا۔",
     qualify: "ٹھیک ہے 👍",
     matches: "آپ کی ضروریات کے مطابق یہ آپشنز موجود ہیں:",
     preview:
       "شائع شدہ پیش منظر (دستیابی کی تصدیق کنسلٹنٹ سے ہوگی):",
+    alternatives:
+      "یہ مزید شائع شدہ آپشنز ہیں۔ کچھ موجودہ بجٹ سے زیادہ ہو سکتے ہیں؛ دستیابی کی تصدیق کنسلٹنٹ کرے گا:",
     none: "فی الحال عین مطابق پراپرٹی دستیاب نہیں۔ کیا آپ ملتے جلتے آپشنز دیکھنا چاہیں گے؟",
     escalate:
       "بالکل 👍 میں آپ کی تفصیلات ایجنٹ کے لیے نوٹ کر دیتا ہوں تاکہ وہ آپ سے رابطہ کر سکے۔",
@@ -59,6 +64,8 @@ const phrases = {
     name: "آپ کا نام کیا ہے؟",
     time: "کس تاریخ اور وقت وزٹ کرنا چاہیں گے؟",
     follow: "پراپرٹی تلاش میں مزید کیا مدد چاہیے؟",
+    farewell: "اللہ حافظ 👋 پراپرٹی کے بارے میں جب بھی مدد چاہیے ہو، ہمیں پیغام کر دیں۔",
+    thanks: "خوشی ہوئی 😊 پراپرٹی کے بارے میں جب بھی مدد چاہیے ہو، پیغام کر دیں۔",
   },
 };
 export function renderResponse(
@@ -79,6 +86,8 @@ export function renderResponse(
   );
   if (kind === "ESCALATE") return p.escalate;
   if (kind === "VIEWING") return p.viewing;
+  if (kind === "FAREWELL") return p.farewell;
+  if (kind === "THANKS") return p.thanks;
   const start =
     kind === "SEARCH"
       ? safe.length
@@ -86,16 +95,49 @@ export function renderResponse(
           ? p.preview
           : p.matches
         : p.none
-      : kind === "WELCOME"
+      : kind === "ALTERNATIVES"
+        ? p.alternatives
+        : kind === "WELCOME"
         ? p.welcome
         : kind === "QUALIFY"
           ? p.qualify
           : p.follow;
   const cards =
-    kind === "SEARCH"
+    kind === "SEARCH" || kind === "ALTERNATIVES"
       ? safe.map(
-          (x) =>
-            `${x.status === "INACTIVE" && x.requiresReview ? "[PREVIEW · AVAILABILITY UNCONFIRMED] " : x.demo ? "[DEMO] " : ""}${x.propertyCode} · ${x.title}\n${x.location}, ${x.city} · ${x.area} ${x.areaUnit}\nPKR ${Number(x.price).toLocaleString("en-PK")}${x.purpose === "RENT" ? " / month" : ""}${x.bedrooms !== null ? ` · ${x.bedrooms} bedrooms` : ""}${x.bathrooms !== null ? ` · ${x.bathrooms} bathrooms` : ""}${x.amenities?.length ? `\n${x.amenities.join(", ")}` : ""}`,
+          (x, index) => {
+            const areaUnit =
+              x.areaUnit === "SQ_FT" ? "sq ft" : x.areaUnit.toLowerCase();
+            const rooms = [
+              x.bedrooms && x.bedrooms > 0 ? `${x.bedrooms} bed` : null,
+              x.bathrooms && x.bathrooms > 0 ? `${x.bathrooms} bath` : null,
+            ].filter(Boolean);
+            const details = [
+              `${x.area} ${areaUnit}`,
+              ...rooms,
+              `PKR ${Number(x.price).toLocaleString("en-PK")}${x.purpose === "RENT" ? "/month" : ""}`,
+            ].join(" · ");
+            const prefix = safe.length > 1 ? `${index + 1}. ` : "";
+            const amenities = x.amenities?.slice(0, 3).join(", ");
+            const availability =
+              x.status === "INACTIVE" && x.requiresReview
+                ? language === "Urdu"
+                  ? "دستیابی کی تصدیق کنسلٹنٹ کرے گا۔"
+                  : language === "Roman Urdu"
+                    ? "Availability consultant se confirm hogi."
+                    : "Availability will be confirmed by our consultant."
+                : null;
+            return [
+              `${prefix}*${x.title}*`,
+              details,
+              `${x.location}, ${x.city}`,
+              amenities || null,
+              `Code: ${x.propertyCode}`,
+              availability,
+            ]
+              .filter(Boolean)
+              .join("\n");
+          },
         )
       : [];
   const q = (

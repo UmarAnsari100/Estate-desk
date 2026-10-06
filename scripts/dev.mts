@@ -70,6 +70,7 @@ if (!process.env.DATABASE_URL?.trim()) {
     password: credentials.databasePassword,
     port,
     persistent: true,
+    initdbFlags: ["--encoding=UTF8", "--locale=C"],
     postgresFlags: ["-h", "127.0.0.1"],
     onLog: () => {},
     onError: () => {},

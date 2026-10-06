@@ -27,6 +27,8 @@ export default function SettingsPage() {
   const { data, error } = useData(`/settings/${path}`);
   const [form, setForm] = useState<Row | null>(null);
   const [message, setMessage] = useState("");
+  const [connection, setConnection] = useState<Row | null>(null);
+  const [qr, setQr] = useState("");
   useEffect(() => {
     setForm(data);
     setMessage("");
@@ -40,7 +42,7 @@ export default function SettingsPage() {
       <ErrorBox error={error} />
       {path === "whatsapp" ? (
         <section className="panel settings-form">
-          <h3>Integration status</h3>
+          <h3>Evolution Go connection</h3>
           {data &&
             Object.entries(data).map(([k, v]) => (
               <div className="setting-row" key={k}>
@@ -49,10 +51,84 @@ export default function SettingsPage() {
               </div>
             ))}
           <p>
-            Credentials are managed in the server’s environment. A configured
-            status does not verify a live connection.
+            Credentials are managed in the server environment. Start the
+            connection, then scan the QR code from WhatsApp → Linked devices.
           </p>
-          <p>Webhook URL: your public API origin + /api/whatsapp/webhook</p>
+          <div className="settings-actions">
+            <button
+              type="button"
+              disabled={!data?.whatsappConfigured}
+              onClick={async () => {
+                try {
+                  setMessage("Starting Evolution Go connection…");
+                  await api("/whatsapp/connect", "POST");
+                  setMessage(
+                    "Connection started. Open the QR code and scan it.",
+                  );
+                } catch (e: any) {
+                  setMessage(e.message);
+                }
+              }}
+            >
+              Start connection
+            </button>
+            <button
+              type="button"
+              disabled={!data?.whatsappConfigured}
+              onClick={async () => {
+                try {
+                  setQr("");
+                  setMessage("Loading QR code…");
+                  const result = await api<Row>("/whatsapp/qr");
+                  const qrImage =
+                    typeof result.qrcode === "string" ? result.qrcode : "";
+                  setQr(qrImage);
+                  setMessage(
+                    qrImage.startsWith("data:image/")
+                      ? "Scan this QR code in WhatsApp."
+                      : "QR code is not ready yet. Click Start connection, wait a few seconds, then try again.",
+                  );
+                } catch (e: any) {
+                  setMessage(e.message);
+                }
+              }}
+            >
+              Show QR code
+            </button>
+            <button
+              type="button"
+              disabled={!data?.whatsappConfigured}
+              onClick={async () => {
+                try {
+                  const result = await api<Row>("/whatsapp/status");
+                  setConnection(result);
+                  setMessage(
+                    result.loggedIn
+                      ? "WhatsApp is connected."
+                      : "WhatsApp is not connected yet.",
+                  );
+                } catch (e: any) {
+                  setMessage(e.message);
+                }
+              }}
+            >
+              Check status
+            </button>
+          </div>
+          {connection && (
+            <div className="connection-result">
+              <b>{connection.loggedIn ? "Connected" : "Not connected"}</b>
+              {connection.myJid && <span>{connection.myJid}</span>}
+            </div>
+          )}
+          {qr && qr.startsWith("data:image/") && (
+            <img
+              className="whatsapp-qr"
+              src={qr}
+              alt="Evolution Go WhatsApp QR code"
+            />
+          )}
+          <div role="status">{message}</div>
         </section>
       ) : (
         form && (

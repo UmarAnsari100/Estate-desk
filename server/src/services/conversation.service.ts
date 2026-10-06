@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { db } from "../repositories/db.js";
 import { identifyCustomer } from "./customer.service.js";
+import { databaseSafeText } from "../utils/text.js";
 export async function lockConversation(
   tx: Prisma.TransactionClient,
   id: string,
@@ -68,7 +69,7 @@ export async function receiveMessage(input: {
         direction: "INCOMING",
         sender: "CUSTOMER",
         type: input.type || "text",
-        content: input.text,
+        content: databaseSafeText(input.text),
         createdAt: receivedAt,
         metadata: { simulated: input.simulated },
         job: { create: {} },

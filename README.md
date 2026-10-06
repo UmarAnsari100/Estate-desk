@@ -1,12 +1,12 @@
 # Estate Desk
 
-A private, single-company real estate WhatsApp workspace. React/Vite dashboard, Express/TypeScript API, PostgreSQL/Prisma storage, Google GenAI integration and the official Meta WhatsApp Cloud API. No QR sessions, scraping or unofficial WhatsApp libraries.
+A private, single-company real estate WhatsApp workspace. React/Vite dashboard, Express/TypeScript API, PostgreSQL/Prisma storage, Google GenAI integration and Evolution Go with QR pairing.
 
 ## What is implemented
 
 - Administrator login with bcrypt password hashes and signed HttpOnly session cookies.
 - Property CRUD, URL-based images, availability changes, filters and pagination.
-- Signed webhook reception, persistent messages, WhatsApp-ID deduplication and a database-backed worker.
+- Secret-protected webhook reception, persistent messages, WhatsApp-ID deduplication and a database-backed worker.
 - Customer identity, bounded conversation history, incremental lead qualification and viewing requests.
 - English, Urdu and Roman Urdu responses, strict database-grounded property cards, human escalation and takeover.
 - Inbox, dashboard metrics, leads, viewing requests, configuration and a simulator.
@@ -20,7 +20,7 @@ The software still needs your PostgreSQL instance and provider credentials for l
 - npm 10+
 - PostgreSQL 16+; Docker Compose is an optional local convenience
 - Gemini API access for live AI
-- Meta Business account, a WhatsApp Business Account and registered Cloud API phone number for real WhatsApp messages
+- A running, licensed Evolution Go service and a WhatsApp account that can link a device
 
 ## Local installation
 
@@ -37,7 +37,7 @@ When `DATABASE_URL` is empty or no `.env` exists, `npm run dev` automatically st
 
 If an account already exists and you do not remember its password, keep the app running and run `npm run admin:reset` in another terminal. It lists local administrator emails and securely prompts for a replacement password without displaying it. The first-account setup is disabled after an administrator exists, and is disabled entirely in production.
 
-To add Gemini/Meta credentials or use a separately managed PostgreSQL database, copy `.env.example` to `.env` and edit it locally. Never paste secrets into chat or commit them. Set `DATABASE_URL` to use your own database instead of the automatic local one.
+To add Gemini/Evolution Go credentials or use a separately managed PostgreSQL database, copy `.env.example` to `.env` and edit it locally. Never paste secrets into chat or commit them. Set `DATABASE_URL` to use your own database instead of the automatic local one.
 
 Optional manual database setup (set `DATABASE_URL=postgresql://estate:estate@localhost:5432/estate` in `.env` for this Compose example):
 
@@ -71,12 +71,11 @@ All secrets are server-side. The client contains no `VITE_` credential variables
 | `JWT_SECRET`                               | Random session-signing secret, at least 32 characters                                        |
 | `GEMINI_API_KEY`                           | Google AI Studio Gemini API key                                                              |
 | `GEMINI_MODEL`                             | Model available to your account; configurable without code changes                           |
-| `WHATSAPP_ACCESS_TOKEN`                    | Meta access token with WhatsApp messaging permission                                         |
-| `WHATSAPP_PHONE_NUMBER_ID`                 | Meta phone-number object ID, not the phone number                                            |
-| `WHATSAPP_BUSINESS_ACCOUNT_ID`             | Your WABA ID for setup/reference                                                             |
-| `WHATSAPP_VERIFY_TOKEN`                    | Random value you choose and enter in Meta webhook configuration                              |
-| `WHATSAPP_APP_SECRET`                      | App secret used to authenticate incoming webhook signatures                                  |
-| `WHATSAPP_GRAPH_VERSION`                   | Explicit Graph API version; example is v23.0, review against your app's supported versions   |
+| `EVOLUTION_API_URL`                        | Evolution Go origin, normally `http://localhost:8080`                                        |
+| `EVOLUTION_INSTANCE_TOKEN`                 | Token assigned to the EstateDesk Evolution Go instance                                       |
+| `EVOLUTION_INSTANCE_NAME`                  | Display name of the Evolution Go instance                                                    |
+| `EVOLUTION_WEBHOOK_SECRET`                 | Random callback secret, at least 24 characters in production                                 |
+| `PUBLIC_API_URL`                           | Public HTTPS origin of EstateDesk, used to configure the Evolution Go callback               |
 | `MOCK_MODE`                                | Enables authenticated simulation; must be false in production                                |
 | `NODE_ENV`                                 | `development`, `test` or `production`                                                        |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | Initial administrator creation only                                                          |
@@ -89,28 +88,28 @@ Gemini extracts requirements and selects a response plan. It does **not** write 
 
 Lead extraction is probabilistic. Agents should review inferred requirements. Null values do not overwrite known fields. Internal lead notes and credentials are never sent to Gemini. A limited recent conversation window, customer name, selected lead fields and business context are sent to Google. Review this data flow against your company's privacy policy.
 
-## Meta / WhatsApp setup
+## Evolution Go / WhatsApp setup
 
-1. Create a Meta developer app with the WhatsApp product and connect your business/WABA.
-2. Register a Cloud API phone number and configure a production token with `whatsapp_business_messaging` permission. Use a suitable business/system-user token for deployment rather than a short-lived testing token.
-3. Put the token, phone-number ID, WABA ID, app secret and your own random verify token into the server environment.
-4. Expose the API over HTTPS. Set the callback to `https://your-api-host/api/whatsapp/webhook` and enter the matching verify token.
-5. Subscribe the app to the WABA and the `messages` webhook field. Incoming messages and delivery/read notifications arrive through this subscription.
-6. Send an actual customer message to your business number and verify reception, a stored message, an AI reply, and delivery/read status in the inbox. Use Meta's test-number/recipient controls while your app is in testing mode.
+1. Install and start [Evolution Go](https://github.com/evolution-foundation/evolution-go). It requires PostgreSQL and license activation through its Manager before business endpoints work.
+2. Create an instance in Evolution Go. Use the same instance token in Evolution Go and `EVOLUTION_INSTANCE_TOKEN` in EstateDesk.
+3. Set `EVOLUTION_API_URL`, `EVOLUTION_INSTANCE_NAME`, a long random `EVOLUTION_WEBHOOK_SECRET`, and the public HTTPS `PUBLIC_API_URL` in EstateDesk.
+4. Restart EstateDesk. Open **WhatsApp Settings**, choose **Start connection**, then **Show QR code**. In WhatsApp open **Linked devices → Link a device** and scan it.
+5. Choose **Check status**. It must report connected before live testing.
+6. Send a message to the linked WhatsApp number and verify the incoming message, Gemini response, lead update, and reply in EstateDesk.
 
-GET verification validates mode/token and returns the challenge. POST requests must pass HMAC SHA-256 verification over exact raw bytes. Events for a different phone-number ID are ignored. Incoming text is persisted transactionally with its job, then acknowledged; Gemini runs outside the webhook request.
+EstateDesk asks Evolution Go to subscribe to `MESSAGE`, `READ_RECEIPT`, and `CONNECTION`. Evolution Go does not sign webhook requests, so the callback contains the random secret as a query parameter and EstateDesk compares it in constant time. Keep the full callback URL out of logs and screenshots. Incoming text is persisted transactionally with its job, then acknowledged; Gemini runs outside the webhook request.
 
 Free-form outbound replies require an incoming customer message within the last 24 hours. This applies to AI and agents. Template messaging is not implemented, so the service blocks replies outside the window instead of attempting unsupported sends. Inbound non-text media is stored as a typed marker and assigned for human attention; media download/transcription is not implemented.
 
 ### Local webhook testing
 
-Run `ngrok http 3001` after starting the API. Use the resulting HTTPS URL plus `/api/whatsapp/webhook` in Meta. Keep `CLIENT_URL` pointing at the local dashboard origin. Ngrok is a development tunnel, not a production hosting strategy. A successful verification challenge alone does not demonstrate end-to-end messaging.
+Run `ngrok http 3001` after starting the API and set the resulting HTTPS origin as `PUBLIC_API_URL`. Restart EstateDesk and use **Start connection** so Evolution Go receives the new callback. Keep `CLIENT_URL` pointing at the local dashboard origin. Ngrok is a development tunnel, not a production hosting strategy.
 
 ## Simulation
 
 Keep `MOCK_MODE=true` locally. In Conversations select **Simulate enquiry**, enter a test phone/name and send `5 marla house in Bahria under 2 crore`.
 
-The simulator writes customers, conversations, messages, jobs and leads to PostgreSQL and uses the same worker, filters, renderer and takeover rules. It never calls Meta. Without a Gemini key it uses a limited deterministic extractor; with a key it calls Gemini. Simulated conversations are isolated from live conversations even when their phone number matches. Every simulated outgoing message has `SIMULATED` status. Use actual inventory and actual provider tests before deployment.
+The simulator writes customers, conversations, messages, jobs and leads to PostgreSQL and uses the same worker, filters, renderer and takeover rules. It never calls Evolution Go. Without a Gemini key it uses a limited deterministic extractor; with a key it calls Gemini. Simulated conversations are isolated from live conversations even when their phone number matches. Every simulated outgoing message has `SIMULATED` status. Use actual inventory and actual provider tests before deployment.
 
 ## Human workflow
 
@@ -118,7 +117,7 @@ The simulator writes customers, conversations, messages, jobs and leads to Postg
 - **Resume AI** clears takeover and allows future incoming messages to trigger AI. It does not replay old messages automatically.
 - Manual sends require takeover. After a successful human reply, the conversation automatically returns to AI for the customer's next message. Failed or uncertain delivery keeps human takeover active. Sending and takeover share a database advisory lock so they cannot race.
 - Viewings start as REQUESTED. An administrator may confirm/cancel/complete them in the dashboard; this only changes the internal record. Send a manual message to communicate an actual confirmation.
-- Failed jobs and delivery outcomes requiring review appear in the overview/inbox. Do not resend an uncertain message until you check Meta delivery state.
+- Failed jobs and delivery outcomes requiring review appear in the overview/inbox. Do not resend an uncertain message until you check Evolution Go delivery state.
 
 ## Testing and build
 
@@ -128,7 +127,7 @@ npm test
 npm run build
 ```
 
-Unit/HTTP tests do not require live credentials. They cover signatures, webhook challenge, authentication boundaries, duplicate-message handling, local units, null-safe lead updates, availability filtering, takeover guards and Meta failure handling. See `docs/architecture.md` for reliability constraints and the deployment acceptance checklist.
+Unit/HTTP tests do not require live credentials. They cover webhook authentication and payload parsing, authentication boundaries, duplicate-message handling, local units, null-safe lead updates, availability filtering, takeover guards and Evolution Go failure handling. See `docs/architecture.md` for reliability constraints and the deployment acceptance checklist.
 
 ## Production deployment
 
@@ -147,17 +146,17 @@ The current server uses in-process HTTP rate-limit counters. Use a shared edge l
 - Sessions are HttpOnly, SameSite=Strict and Secure in production. Unsafe methods require an exact allowed Origin. Cookie sessions expire after eight hours; rotate JWT_SECRET to revoke all sessions.
 - There is no public signup, password reset, role system or multi-tenant organization model. Account provisioning is administrative.
 - If login fails, verify seed credentials, exact `CLIENT_URL` origin and database connectivity. API tools must supply the correct Origin on mutations.
-- If no webhook arrives, check public HTTPS access, WABA subscription, phone-number ID and Meta's test recipient restrictions.
-- If signatures fail, confirm you used the **app secret**, not the verify token or access token.
+- If no webhook arrives, check `PUBLIC_API_URL`, restart the connection, and confirm Evolution Go subscribed to `MESSAGE`.
+- If the webhook returns 401, ensure Evolution Go is using the callback generated by **Start connection** and that `EVOLUTION_WEBHOOK_SECRET` did not change.
 - If Gemini fails, verify API key/model access/quota; the conversation moves to human attention. No automatic fabricated response is sent.
-- If Meta returns 401/429/5xx or a timeout, inspect the message's uncertain status and provider dashboard. There is intentionally no automatic send retry.
-- If PostgreSQL is unavailable, reception fails instead of acknowledging messages that were not saved; Meta can retry them.
+- If Evolution Go returns 401/429/5xx or a timeout, inspect the message's uncertain status and Evolution Manager. There is intentionally no automatic send retry.
+- If PostgreSQL is unavailable, reception fails instead of acknowledging messages that were not saved; Evolution Go retries non-2xx webhooks.
 - Limit access to the database and backups. Define a retention/deletion policy for customer messages and lead PII before rollout. The application does not automatically delete customer history.
 
 ## Integration references
 
 - [Google GenAI SDK configuration](https://googleapis.github.io/js-genai/release_docs/interfaces/types.GenerateContentConfig.html)
 - [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output)
-- [Meta official text-message request](https://www.postman.com/meta/whatsapp-business-platform/request/8gvd47s/send-text-message)
-- [Meta official webhook payload reference](https://www.postman.com/meta/whatsapp-business-platform/folder/tduohwq/webhook-payload-reference)
-- [Meta Graph webhook setup](https://developers.facebook.com/docs/graph-api/webhooks/getting-started)
+- [Evolution Go official repository](https://github.com/evolution-foundation/evolution-go)
+- [Evolution Go message API](https://github.com/evolution-foundation/evolution-go/blob/main/docs/wiki/guias-api/api-messages.md)
+- [Evolution Go instance API](https://github.com/evolution-foundation/evolution-go/blob/main/docs/wiki/guias-api/api-instances.md)

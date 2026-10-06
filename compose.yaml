@@ -11,5 +11,53 @@ services:
       test: ["CMD-SHELL", "pg_isready -U estate"]
       interval: 5s
       retries: 10
+
+  evolution-postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${EVOLUTION_POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+      - ./scripts/evolution-init.sql:/docker-entrypoint-initdb.d/evolution-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  evolution-go:
+    image: evoapicloud/evolution-go:0.7.2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:4000"
+    environment:
+      SERVER_PORT: 4000
+      CLIENT_NAME: estate-desk
+      GLOBAL_API_KEY: ${EVOLUTION_GLOBAL_API_KEY}
+      POSTGRES_AUTH_DB: postgresql://postgres:${EVOLUTION_POSTGRES_PASSWORD}@evolution-postgres:5432/evogo_auth?sslmode=disable
+      POSTGRES_USERS_DB: postgresql://postgres:${EVOLUTION_POSTGRES_PASSWORD}@evolution-postgres:5432/evogo_users?sslmode=disable
+      DATABASE_SAVE_MESSAGES: "false"
+      WADEBUG: INFO
+      LOGTYPE: console
+      CONNECT_ON_STARTUP: "false"
+      WEBHOOK_FILES: "true"
+    volumes:
+      - evolution_data:/app/dbdata
+      - evolution_logs:/app/logs
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000/server/ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 volumes:
   estate_data:
+  evolution_postgres_data:
+  evolution_data:
+  evolution_logs:

@@ -7,10 +7,7 @@ import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { env } from "./config/env.js";
 import { api } from "./routes/api.js";
-import {
-  receiveWebhook,
-  verifyWebhook,
-} from "./controllers/webhook.controller.js";
+import { receiveWebhook } from "./controllers/webhook.controller.js";
 import { AppError } from "./utils/errors.js";
 import { logger } from "./utils/logger.js";
 import { db } from "./repositories/db.js";
@@ -26,7 +23,6 @@ app.get("/api/health", async (_req, res) => {
     res.status(503).json({ status: "database unavailable" });
   }
 });
-app.get("/api/whatsapp/webhook", verifyWebhook);
 app.post(
   "/api/whatsapp/webhook",
   express.raw({ type: "application/json", limit: "1mb" }),

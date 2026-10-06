@@ -5,6 +5,8 @@ import {
   mockAnalysis,
   mockConversationAnalysis,
   greetingAnalysis,
+  farewellAnalysis,
+  courtesyAnalysis,
 } from "./gemini.service.js";
 import { leadService } from "./lead.service.js";
 import { nonNullLead } from "./lead.service.js";
@@ -45,6 +47,96 @@ export function asksForPaymentPlan(text: string) {
   );
 }
 
+export function asksForAnotherOption(text: string) {
+  return /\b(any\s+other|other|another|different|more)\s+(?:property|properties|listing|listings|option|options)\b|\b(?:koi|koe)\s+(?:aur|or)\s+(?:property|listing|option)\b|\b(?:aur|or)\s+(?:koi\s+)?(?:kon\s+kon\s+se\s+)?(?:properties|listings|options?)\b|\bdoosr[ai]\s+(?:property|listing|option)\b/i.test(
+    text,
+  );
+}
+
+export function paymentPlanImageUrl(property: { images: string[] }) {
+  return (
+    property.images.find((imageUrl) =>
+      /(?:payment[_-]?plan|installment)/i.test(imageUrl),
+    ) ?? property.images[0]
+  );
+}
+
+export function projectInventoryQuery(
+  ...values: Array<string | null | undefined>
+) {
+  const text = values.filter(Boolean).join(" ").toLowerCase();
+  if (/\bideas\s*(?:one|1)\b|\bideasone\b/.test(text)) return "IG-ONE";
+  if (/\bideas\s*tower\s*a\b/.test(text)) return "IG-TOWER-A";
+  if (/\bideas\s*tower\s*b\b/.test(text)) return "IG-TOWER-B";
+  if (/\bideas\s*tower\b/.test(text)) return "IG-TOWER";
+  return null;
+}
+
+export function clearsBudget(text: string) {
+  return /\b(?:i\s+(?:didn'?t|did not|never)\s+(?:tell|told|give|gave|mention(?:ed)?|set)(?:\s+you)?(?:\s+my)?\s+budget|no\s+budget(?:\s+limit)?|budget\s+(?:is\s+)?not\s+(?:decided|fixed)|budget\s+nahi\s+(?:bataya|diya|hai)|maine\s+budget\s+nahi\s+bataya)\b/i.test(
+    text,
+  );
+}
+
+export function standalonePropertyType(text: string) {
+  const normalized = text
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?؟،]/g, "")
+    .replace(/\s+/g, " ");
+  if (/^(?:a |an )?(?:plot|plots)$/.test(normalized)) return "PLOT";
+  if (/^(?:a |an )?(?:apartment|apartments|flat|flats)$/.test(normalized))
+    return "APARTMENT";
+  if (/^(?:a |an )?(?:house|houses|home|homes|ghar)$/.test(normalized))
+    return "HOUSE";
+  if (/^(?:a |an )?(?:commercial|shop|shops|office|offices)$/.test(normalized))
+    return "COMMERCIAL";
+  return null;
+}
+
+export function normalizePropertyReference(value: string) {
+  return value
+    .toUpperCase()
+    .replace(/[—–]/g, "-")
+    .replace(/\s*-\s*/g, "-")
+    .replace(/[^A-Z0-9-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function resolvePropertyReference<
+  T extends {
+    propertyCode: string;
+    title: string;
+    area: unknown;
+    areaUnit: string;
+  },
+>(text: string, candidates: T[]) {
+  const normalized = normalizePropertyReference(text);
+  const byCodeOrTitle = candidates.find((property) => {
+    const code = normalizePropertyReference(property.propertyCode);
+    const title = normalizePropertyReference(property.title);
+    return normalized.includes(code) || normalized.includes(title);
+  });
+  if (byCodeOrTitle) return byCodeOrTitle;
+  if (
+    !/\b(details?|show|send|want|interested|select|choose|dikhao|batao)\b/i.test(
+      text,
+    )
+  )
+    return null;
+  const area = text.match(
+    /\b(\d+(?:\.\d+)?)\s*(sq\.?\s*ft|square\s*feet|marla|kanal)\b/i,
+  );
+  if (!area) return null;
+  const unit = /sq|square/i.test(area[2]) ? "SQ_FT" : area[2].toUpperCase();
+  const sizeMatches = candidates.filter(
+    (property) =>
+      Number(property.area) === Number(area[1]) && property.areaUnit === unit,
+  );
+  return sizeMatches.length === 1 ? sizeMatches[0] : null;
+}
+
 export async function processMessage(messageId: string) {
   const message = await db.message.findUniqueOrThrow({
     where: { id: messageId },
@@ -79,28 +171,56 @@ export async function processMessage(messageId: string) {
     );
     return;
   }
-  const referencedProperty = await db.property.findFirst({
+  // A standalone farewell closes the exchange and must not repeat the last property.
+  const farewell = farewellAnalysis(message.content);
+  if (farewell) {
+    await sendReply(
+      c.id,
+      renderResponse(farewell.language, "FAREWELL", []),
+      "AI",
+      message.id,
+    );
+    return;
+  }
+  const courtesy = courtesyAnalysis(message.content);
+  if (courtesy) {
+    await sendReply(
+      c.id,
+      renderResponse(courtesy.language, "THANKS", []),
+      "AI",
+      message.id,
+    );
+    return;
+  }
+  if (clearsBudget(message.content)) {
+    await db.lead.update({
+      where: { conversationId: c.id },
+      data: { minimumBudget: null, maximumBudget: null },
+    });
+    const language = mockAnalysis(message.content).language;
+    const reply =
+      language === "Urdu"
+        ? "ٹھیک ہے، میں نے پچھلا بجٹ ہٹا دیا ہے۔ تقریباً بجٹ کتنا رکھنا چاہیں گے؟"
+        : language === "Roman Urdu"
+          ? "Theek hai, previous budget remove kar diya hai. Approx budget kitna rakhna chahenge?"
+          : "No problem, I've removed the previous budget. What approximate budget would you like to use?";
+    await sendReply(c.id, reply, "AI", message.id);
+    return;
+  }
+  const referenceCandidates = await db.property.findMany({
     where: {
+      ...(c.simulated ? {} : { demo: false }),
       OR: [
-        {
-          propertyCode: { equals: message.content.trim(), mode: "insensitive" },
-        },
-        { title: { equals: message.content.trim(), mode: "insensitive" } },
+        { status: "AVAILABLE" as const },
+        { status: "INACTIVE" as const, requiresReview: true },
       ],
-      ...(c.simulated
-        ? {
-            AND: [
-              {
-                OR: [
-                  { status: "AVAILABLE" as const },
-                  { status: "INACTIVE" as const, requiresReview: true },
-                ],
-              },
-            ],
-          }
-        : { status: "AVAILABLE" as const, demo: false }),
     },
+    take: 200,
   });
+  const referencedProperty = resolvePropertyReference(
+    message.content,
+    referenceCandidates,
+  );
   if (referencedProperty) {
     await db.lead.update({
       where: { conversationId: c.id },
@@ -113,10 +233,11 @@ export async function processMessage(messageId: string) {
         "SEARCH",
         [referencedProperty],
         "NONE",
-        c.simulated,
+        true,
       ),
       "AI",
       message.id,
+      { imageUrl: referencedProperty.images[0] },
     );
     return;
   }
@@ -170,6 +291,7 @@ export async function processMessage(messageId: string) {
         renderPaymentPlan(language, property),
         "AI",
         message.id,
+        { imageUrl: paymentPlanImageUrl(property) },
       );
     } else {
       await sendReply(
@@ -189,7 +311,10 @@ export async function processMessage(messageId: string) {
     /details dekhna chahenge|would you like its details|would you like to see|تفصیل دیکھنا چاہیں/i.test(
       lastAiMessage.content,
     );
-  if (offeredAlternativeInLastReply && asksForPropertyDetails(message.content)) {
+  if (
+    offeredAlternativeInLastReply &&
+    asksForPropertyDetails(message.content)
+  ) {
     const candidates = await db.property.findMany({
       where: {
         demo: false,
@@ -220,6 +345,7 @@ export async function processMessage(messageId: string) {
         renderResponse(language, "SEARCH", [offered], "NONE", true),
         "AI",
         message.id,
+        { imageUrl: offered.images[0] },
       );
       return;
     }
@@ -236,6 +362,102 @@ export async function processMessage(messageId: string) {
           ? "Theek hai, koi baat nahi. Aap kis location, budget ya property type mein search karna chahenge?"
           : "Understood. What location, budget, or property type would you prefer to explore instead?";
     await sendReply(c.id, declineReply, "AI", message.id);
+    return;
+  }
+  if (asksForAnotherOption(message.content)) {
+    const seen = history
+      .filter((item) => item.sender === "AI")
+      .map((item) => item.content.toLowerCase())
+      .join("\n");
+    const exactCandidates = (
+      await db.property.findMany({
+        where: {
+          demo: false,
+          purpose: c.lead?.purpose ?? undefined,
+          propertyType: c.lead?.propertyType ?? undefined,
+          city: c.lead?.city
+            ? { contains: c.lead.city, mode: "insensitive" }
+            : undefined,
+          location: c.lead?.preferredLocation
+            ? { contains: c.lead.preferredLocation, mode: "insensitive" }
+            : undefined,
+          OR: [
+            { status: "AVAILABLE" },
+            { status: "INACTIVE", requiresReview: true },
+          ],
+        },
+        orderBy: { price: "asc" },
+        take: 20,
+      })
+    ).filter(
+      (property) =>
+        !seen.includes(property.propertyCode.toLowerCase()) &&
+        !seen.includes(property.title.toLowerCase()),
+    );
+    let candidates = exactCandidates;
+    let showingNearby = false;
+    if (!candidates.length && c.lead?.preferredLocation) {
+      candidates = (
+        await db.property.findMany({
+          where: {
+            demo: false,
+            purpose: c.lead.purpose ?? undefined,
+            propertyType: c.lead.propertyType ?? undefined,
+            city: c.lead.city
+              ? { contains: c.lead.city, mode: "insensitive" }
+              : undefined,
+            OR: [
+              { status: "AVAILABLE" },
+              { status: "INACTIVE", requiresReview: true },
+            ],
+          },
+          orderBy: { price: "asc" },
+          take: 30,
+        })
+      ).filter(
+        (property) =>
+          !seen.includes(property.propertyCode.toLowerCase()) &&
+          !seen.includes(property.title.toLowerCase()),
+      );
+      showingNearby = candidates.length > 0;
+    }
+    const language = mockAnalysis(message.content).language;
+    const noMore =
+      language === "Urdu"
+        ? "موجودہ لوکیشن، بجٹ اور پراپرٹی کی قسم میں کوئی اور شائع شدہ آپشن نہیں ہے۔ آپ لوکیشن، سائز، قسم یا بجٹ میں سے کس چیز میں تبدیلی کر سکتے ہیں؟"
+        : language === "Roman Urdu"
+          ? "Current location, budget aur property type mein koi aur published option nahi hai. Aap location, size, type ya budget mein se kis cheez mein flexibility rakh sakte hain?"
+          : "There isn't another published option within the current location, budget, and property type. Which can be flexible: location, size, type, or budget?";
+    const nearbyIntro =
+      language === "Urdu"
+        ? "اس جگہ پر مزید نئے آپشن نہیں ہیں، اس لیے یہ اسی شہر کے قریبی آپشنز ہیں:"
+        : language === "Roman Urdu"
+          ? "Is exact location par mazeed new option nahi hai, is liye ye nearby options hain:"
+          : "There are no more new options at that exact location, so here are nearby options:";
+    const selectedOptions = candidates.slice(0, 3);
+    const optionsReply = candidates.length
+      ? renderResponse(language, "ALTERNATIVES", selectedOptions, "NONE", true)
+      : noMore;
+    await sendReply(
+      c.id,
+      showingNearby ? `${nearbyIntro}\n\n${optionsReply}` : optionsReply,
+      "AI",
+      message.id,
+      {
+        media: selectedOptions
+          .filter((property) => property.images[0])
+          .map((property, index) => ({
+            imageUrl: property.images[0],
+            caption: `${showingNearby && index === 0 ? `${nearbyIntro}\n\n` : ""}${renderResponse(
+              language,
+              "SEARCH",
+              [property],
+              "NONE",
+              true,
+            )}`,
+          })),
+      },
+    );
     return;
   }
   const resetSearch = startsNewSearch(message.content);
@@ -289,6 +511,28 @@ export async function processMessage(messageId: string) {
       ...deterministicLead,
     },
   };
+  const selectedType = standalonePropertyType(message.content);
+  if (selectedType) {
+    analysis.intent = "PROPERTY_SEARCH";
+    analysis.escalate = false;
+    analysis.lead.propertyType = selectedType;
+    await db.lead.update({
+      where: { conversationId: c.id },
+      data: {
+        propertyType: selectedType,
+        interestedPropertyId: null,
+        bedrooms: null,
+        ...(selectedType === "APARTMENT" || selectedType === "COMMERCIAL"
+          ? { preferredArea: null, areaUnit: null }
+          : {}),
+      },
+    });
+    delete analysis.lead.bedrooms;
+    if (selectedType === "APARTMENT" || selectedType === "COMMERCIAL") {
+      delete analysis.lead.preferredArea;
+      delete analysis.lead.areaUnit;
+    }
+  }
   if (analysis.intent === "GREETING" && !analysis.escalate) {
     await sendReply(
       c.id,
@@ -298,11 +542,35 @@ export async function processMessage(messageId: string) {
     );
     return;
   }
+  if (
+    ["GENERAL_FAQ", "UNKNOWN"].includes(analysis.intent) &&
+    !analysis.escalate &&
+    !hasDeterministicLead
+  ) {
+    const answer = await geminiService.answerGeneralQuestion(
+      {
+        question: message.content,
+        business: context.business,
+        recentConversation: context.history.slice(-8),
+      },
+      settings.temperature,
+    );
+    await sendReply(c.id, answer.answer, "AI", message.id);
+    return;
+  }
   const lead = await leadService.update(c.id, analysis.lead, resetSearch);
+  const projectQuery = projectInventoryQuery(
+    message.content,
+    lead.preferredLocation,
+  );
+  const inventoryLocation = projectQuery
+    ? undefined
+    : (lead.preferredLocation ?? undefined);
   const searchFilters = {
     purpose: lead.purpose ?? undefined,
     propertyType: lead.propertyType ?? undefined,
-    location: lead.preferredLocation ?? undefined,
+    location: inventoryLocation,
+    q: projectQuery ?? undefined,
     city: lead.city ?? undefined,
     minimumPrice: lead.minimumBudget ? Number(lead.minimumBudget) : undefined,
     maximumPrice: lead.maximumBudget ? Number(lead.maximumBudget) : undefined,
@@ -329,7 +597,8 @@ export async function processMessage(messageId: string) {
         {
           purpose: lead.purpose ?? undefined,
           propertyType: lead.propertyType ?? undefined,
-          location: lead.preferredLocation ?? undefined,
+          location: inventoryLocation,
+          q: projectQuery ?? undefined,
           city: lead.city ?? undefined,
           minimumPrice: lead.minimumBudget
             ? Number(lead.minimumBudget)
@@ -357,42 +626,39 @@ export async function processMessage(messageId: string) {
           city: lead.city
             ? { contains: lead.city, mode: "insensitive" }
             : undefined,
-          location: lead.preferredLocation
-            ? { contains: lead.preferredLocation, mode: "insensitive" }
+          location: inventoryLocation
+            ? { contains: inventoryLocation, mode: "insensitive" }
             : undefined,
-          OR: [
-            { status: "AVAILABLE" },
-            { status: "INACTIVE", requiresReview: true },
-          ],
+          OR: projectQuery
+            ? [
+                { title: { contains: projectQuery, mode: "insensitive" } },
+                {
+                  propertyCode: {
+                    contains: projectQuery,
+                    mode: "insensitive",
+                  },
+                },
+              ]
+            : [
+                { status: "AVAILABLE" },
+                { status: "INACTIVE", requiresReview: true },
+              ],
+          AND: projectQuery
+            ? [
+                {
+                  OR: [
+                    { status: "AVAILABLE" },
+                    { status: "INACTIVE", requiresReview: true },
+                  ],
+                },
+              ]
+            : undefined,
         },
         orderBy: { price: "asc" },
         take: 3,
       });
-  if (!verified.length && !alternatives.length)
-    alternatives = await db.property.findMany({
-      where: {
-        demo: false,
-        purpose: lead.purpose ?? undefined,
-        city: lead.city
-          ? { contains: lead.city, mode: "insensitive" }
-          : undefined,
-        location: lead.preferredLocation
-          ? { contains: lead.preferredLocation, mode: "insensitive" }
-          : undefined,
-        OR: [
-          { status: "AVAILABLE" },
-          { status: "INACTIVE", requiresReview: true },
-        ],
-      },
-      orderBy: { price: "asc" },
-      take: 3,
-    });
   const viewing = analysis.intent === "SCHEDULE_VIEWING";
-  const escalation =
-    analysis.escalate ||
-    ["TALK_TO_AGENT", "UNKNOWN", "SELL_PROPERTY", "GENERAL_FAQ"].includes(
-      analysis.intent,
-    );
+  const escalation = analysis.escalate || analysis.intent === "TALK_TO_AGENT";
   const interested = analysis.propertyCode
     ? verified.find((p) => p.propertyCode === analysis.propertyCode)
     : undefined;

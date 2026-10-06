@@ -3,7 +3,7 @@
   "sourceUrl": "https://github.com/tayyeb805/ideasgroup-website/blob/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/index.html",
   "sourceRevision": "a9ae27ae513cd914eef58f4b2d554eda613bcfb3",
   "sourceCommittedAt": "2026-09-26T12:28:16.000Z",
-  "extractedAt": "2026-09-26T18:16:58.941Z",
+  "extractedAt": "2026-09-29T17:25:07.552Z",
   "apartmentPriceRows": 17,
   "commercialReferenceRows": 6,
   "warnings": [
@@ -76,7 +76,11 @@
         "possession": 742500,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_studio_1bed.png",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_payment_plan.png"
+      ]
     },
     {
       "propertyCode": "IG-ONE-1-BED-720",
@@ -110,7 +114,11 @@
         "possession": 1188000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_studio_1bed.png",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_payment_plan.png"
+      ]
     },
     {
       "propertyCode": "IG-ONE-2-BED-1275",
@@ -144,7 +152,11 @@
         "possession": 2103750,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_2bed.png",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_payment_plan.png"
+      ]
     },
     {
       "propertyCode": "IG-ONE-2-BED-1400",
@@ -178,7 +190,11 @@
         "possession": 2310000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_2bed.png",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_payment_plan.png"
+      ]
     },
     {
       "propertyCode": "IG-ONE-2-BED-1450",
@@ -212,7 +228,11 @@
         "possession": 2392500,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_2bed.png",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_payment_plan.png"
+      ]
     },
     {
       "propertyCode": "IG-ONE-3-BED-1780",
@@ -246,7 +266,11 @@
         "possession": 2937000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_3bed.png",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_payment_plan.png"
+      ]
     },
     {
       "propertyCode": "IG-ONE-3-BED-2000",
@@ -280,7 +304,11 @@
         "possession": 3300000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_3bed.png",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_featured.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/one/ideas_one_payment_plan.png"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-A-C-750",
@@ -314,7 +342,11 @@
         "possession": 750000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typec.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_a.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-A-B-1250",
@@ -348,7 +380,11 @@
         "possession": 1250000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typeb.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_a.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-A-B-1-1600",
@@ -382,7 +418,11 @@
         "possession": 1600000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typeb.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_a.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-A-A-1850",
@@ -416,7 +456,11 @@
         "possession": 1850000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typea.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_a.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-A-A-1-1950",
@@ -450,7 +494,11 @@
         "possession": 1950000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typea.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_a.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-A-XL-2250",
@@ -484,7 +532,11 @@
         "possession": 2250000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typexl.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_a.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-B-C-750",
@@ -518,7 +570,11 @@
         "possession": 600000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typec.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_b.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-B-B-1250",
@@ -552,7 +608,11 @@
         "possession": 1000000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typeb.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_b.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-B-B-1325",
@@ -586,7 +646,11 @@
         "possession": 1060000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typeb.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_b.jpg"
+      ]
     },
     {
       "propertyCode": "IG-TOWER-B-B-1-1600",
@@ -620,7 +684,11 @@
         "possession": 1280000,
         "sourceAvailability": "NOT_STATED"
       },
-      "imageUrl": "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg"
+      "imageUrls": [
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/typeb.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_elevation.jpg",
+        "https://raw.githubusercontent.com/tayyeb805/ideasgroup-website/a9ae27ae513cd914eef58f4b2d554eda613bcfb3/public/images/tower/ideas_tower_payment_plan_b.jpg"
+      ]
     }
   ]
 }

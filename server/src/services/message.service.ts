@@ -3,12 +3,21 @@ import { db } from "../repositories/db.js";
 import { lockConversation, aiAllowed } from "./conversation.service.js";
 import { whatsappService } from "./whatsapp.service.js";
 import { AppError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 import { Prisma } from "@prisma/client";
+import { databaseSafeText } from "../utils/text.js";
+
+type ReplyDelivery = {
+  imageUrl?: string;
+  media?: Array<{ imageUrl: string; caption: string }>;
+};
+
 export async function sendReply(
   id: string,
   content: string | ((tx: Prisma.TransactionClient) => Promise<string>),
   sender: "AI" | "ADMIN",
   replyToId?: string,
+  delivery: ReplyDelivery = {},
 ) {
   return db.$transaction(
     async (tx) => {
@@ -35,24 +44,54 @@ export async function sendReply(
       if (replyToId && (await tx.message.findUnique({ where: { replyToId } })))
         return null;
       const body = typeof content === "string" ? content : await content(tx);
+      const safeBody = databaseSafeText(body);
+      const media = (delivery.media || []).filter(
+        (item) => item.imageUrl && item.caption,
+      );
+      const sendsImage = Boolean(delivery.imageUrl || media.length);
       const message = await tx.message.create({
         data: {
           conversationId: id,
           replyToId,
-          content: body,
+          content: safeBody,
           sender,
           direction: "OUTGOING",
+          type: sendsImage ? "image" : "text",
           status: "SENDING",
-          metadata: { simulated: c.simulated },
+          metadata: {
+            simulated: c.simulated,
+            ...(delivery.imageUrl ? { imageUrl: delivery.imageUrl } : {}),
+            ...(media.length
+              ? { imageUrls: media.map((item) => item.imageUrl) }
+              : {}),
+          },
         },
       });
       try {
-        const externalId = c.simulated
-          ? `mock-out-${randomUUID()}`
-          : await whatsappService.sendTextMessage(
-              c.customer.whatsappNumber,
-              body,
-            );
+        let externalId: string;
+        if (c.simulated) externalId = `mock-out-${randomUUID()}`;
+        else if (media.length) {
+          const externalIds = await Promise.all(
+            media.map((item) =>
+              whatsappService.sendImageMessage(
+                c.customer.whatsappNumber,
+                item.imageUrl,
+                databaseSafeText(item.caption),
+              ),
+            ),
+          );
+          externalId = externalIds[0];
+        } else if (delivery.imageUrl)
+          externalId = await whatsappService.sendImageMessage(
+            c.customer.whatsappNumber,
+            delivery.imageUrl,
+            safeBody,
+          );
+        else
+          externalId = await whatsappService.sendTextMessage(
+            c.customer.whatsappNumber,
+            safeBody,
+          );
         await tx.conversation.update({
           where: { id },
           data: {
@@ -74,7 +113,20 @@ export async function sendReply(
             whatsappMessageId: externalId,
           },
         });
-      } catch {
+      } catch (err) {
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : "Delivery failed or uncertain. Check Evolution Go before retrying.";
+        logger.error(
+          {
+            err,
+            conversationId: id,
+            phone: c.customer.whatsappNumber,
+            simulated: c.simulated,
+          },
+          "WhatsApp delivery failed; triggering human takeover",
+        );
         await tx.conversation.update({
           where: { id },
           data: { status: "WAITING", humanTakeover: true },
@@ -85,13 +137,15 @@ export async function sendReply(
             status: "UNKNOWN",
             metadata: {
               simulated: c.simulated,
-              error:
-                "Delivery failed or uncertain. Check Meta before retrying.",
+              error: errorMsg,
             },
           },
         });
       }
     },
-    { timeout: 25000, maxWait: 30000 },
+    {
+      timeout: delivery.imageUrl || delivery.media?.length ? 75000 : 25000,
+      maxWait: 30000,
+    },
   );
 }

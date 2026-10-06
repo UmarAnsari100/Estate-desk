@@ -3,7 +3,7 @@
 ## Request paths
 
 ```text
-Meta -> raw-body signature check -> PostgreSQL transaction
+Evolution Go -> callback-secret check -> PostgreSQL transaction
                                      customer/conversation/message/job
                                      -> HTTP 200
 
@@ -11,7 +11,7 @@ Worker -> claim durable job -> bounded history -> Gemini extraction
        -> incremental lead -> Prisma property query -> Gemini response plan
        -> conversation lock -> recheck AI/takeover/window
        -> lock/reload inventory -> deterministic multilingual rendering
-       -> Meta or simulation -> persisted outgoing status
+       -> Evolution Go or simulation -> persisted outgoing status
 
 React -> same-origin API -> session authentication -> validated services -> Prisma
 ```
@@ -38,9 +38,9 @@ Webhook IDs are unique, with transaction-scoped per-phone locks protecting dupli
 
 AI generates outside the outbound transaction. Just before a send, the system locks the conversation, rechecks takeover and global AI state, checks the messaging window and prevents a second reply for the same incoming message. Relevant property rows are locked and reloaded so an availability edit cannot overtake the send. Manual replies require takeover and use the same lock. A successfully delivered human reply automatically resumes AI; failed or uncertain delivery preserves takeover.
 
-Exactly-once delivery to an external HTTP provider is not promised. A process can fail after Meta accepts a message but before database commit. PROCESSING jobs older than three minutes become FAILED and the conversation is escalated, with no automatic replay. Timeouts and send errors produce UNKNOWN outgoing status and human takeover. This prioritizes avoiding duplicate messages over automatic recovery. A human must check provider state before manually replying.
+Exactly-once delivery to an external HTTP provider is not promised. A process can fail after Evolution Go accepts a message but before database commit. PROCESSING jobs older than three minutes become FAILED and the conversation is escalated, with no automatic replay. Timeouts and send errors produce UNKNOWN outgoing status and human takeover. This prioritizes avoiding duplicate messages over automatic recovery. A human must check provider state before manually replying.
 
-A takeover request waits for a currently executing send lock. Messages already submitted to Meta cannot be canceled. Takeover suppresses responses still being generated and all subsequent sends after its transaction commits.
+A takeover request waits for a currently executing send lock. Messages already submitted to Evolution Go cannot be canceled. Takeover suppresses responses still being generated and all subsequent sends after its transaction commits.
 
 ## Deliberate limits
 
@@ -59,10 +59,10 @@ A takeover request waits for a currently executing send lock. Messages already s
 Before using real customer traffic, verify with your infrastructure and credentials:
 
 1. Apply migrations against a disposable PostgreSQL database and seed it.
-2. Replay the same signed WhatsApp event concurrently; expect one message/job/reply.
+2. Replay the same authenticated Evolution Go event concurrently; expect one message/job/reply.
 3. Simulate a search and compare results with actual AVAILABLE inventory; SOLD/demo records must not enter live recommendations.
 4. Take over while Gemini is running; expect the final send to be suppressed.
 5. Kill a worker after an external send; verify stale-job escalation and no automatic replay.
-6. Exercise Meta token expiration, 429, timeout and delivered/read callbacks.
+6. Exercise Evolution Go token failure, 429, timeout and delivered/read callbacks.
 7. Verify customer service window expiry blocks manual and automatic free-form replies.
 8. Restore a database backup and check secret handling, HTTPS and access controls.

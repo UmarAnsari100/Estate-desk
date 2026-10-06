@@ -30,7 +30,7 @@ export type ImportedProperty = {
   currency: "PKR";
   description: string;
   amenities: string[];
-  imagePath: string;
+  imagePaths: string[];
   sourceReference: string;
   pricingDetails: PricingDetails;
 };
@@ -50,6 +50,35 @@ const slug = (value: string) =>
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+
+const ideasOneImagePaths = (category: string) => {
+  const floorPlan = /^studio$|^1\s*bed$/i.test(category)
+    ? "public/images/one/ideas_one_studio_1bed.png"
+    : /^2\s*bed$/i.test(category)
+      ? "public/images/one/ideas_one_2bed.png"
+      : "public/images/one/ideas_one_3bed.png";
+  return [
+    floorPlan,
+    "public/images/one/ideas_one_featured.jpg",
+    "public/images/one/ideas_one_payment_plan.png",
+  ];
+};
+
+const towerImagePaths = (type: string, tower: "A" | "B") => {
+  const normalized = type.trim().toUpperCase();
+  const floorPlan = normalized.startsWith("XL")
+    ? "public/images/tower/typexl.jpg"
+    : normalized.startsWith("B")
+      ? "public/images/tower/typeb.jpg"
+      : normalized.startsWith("C")
+        ? "public/images/tower/typec.jpg"
+        : "public/images/tower/typea.jpg";
+  return [
+    floorPlan,
+    "public/images/tower/ideas_tower_elevation.jpg",
+    `public/images/tower/ideas_tower_payment_plan_${tower.toLowerCase()}.jpg`,
+  ];
+};
 
 export function parseIdeasGroupWebsite(html: string) {
   const $ = cheerio.load(html);
@@ -86,7 +115,7 @@ export function parseIdeasGroupWebsite(html: string) {
         "24/7 security surveillance",
         "Full backup power",
       ],
-      imagePath: "public/images/one/ideas_one_featured.jpg",
+      imagePaths: ideasOneImagePaths(category),
       sourceReference: `IDEAS ONE apartments / ${category} / ${area} sq ft`,
       pricingDetails: {
         publishedRatePerSqFt: 16500,
@@ -146,7 +175,7 @@ export function parseIdeasGroupWebsite(html: string) {
           "24/7 security",
           "Backup power",
         ],
-        imagePath: "public/images/tower/ideas_tower_elevation.jpg",
+        imagePaths: towerImagePaths(type, tower),
         sourceReference: `IDEAS Tower ${tower} / ${category} / Type ${type} / ${area} sq ft`,
         pricingDetails: {
           publishedRatePerSqFt: rate,

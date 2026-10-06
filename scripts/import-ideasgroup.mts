@@ -52,9 +52,9 @@ const report = {
     "Payment terms are source facts, but availability, discounts and final quotes must be confirmed by an authorized agent.",
   ],
   commercialRates,
-  properties: properties.map(({ imagePath, ...property }) => ({
+  properties: properties.map(({ imagePaths, ...property }) => ({
     ...property,
-    imageUrl: rawBase + imagePath,
+    imageUrls: imagePaths.map((imagePath) => rawBase + imagePath),
   })),
 };
 await mkdir("docs", { recursive: true });
@@ -118,7 +118,7 @@ try {
       currency: property.currency,
       description: property.description,
       amenities: property.amenities,
-      images: [rawBase + property.imagePath],
+      images: property.imagePaths.map((imagePath) => rawBase + imagePath),
       sourceUrl,
       sourceRepository,
       sourceRevision: revision,

@@ -11,6 +11,7 @@ import { propertySchema, leadStatus } from "../types/schemas.js";
 import { propertyService } from "../services/property.service.js";
 import { receiveMessage, takeover } from "../services/conversation.service.js";
 import { sendReply } from "../services/message.service.js";
+import { whatsappService } from "../services/whatsapp.service.js";
 import { AppError } from "../utils/errors.js";
 export const api = Router();
 api.use(sameOrigin);
@@ -258,6 +259,20 @@ const manual = async (req: any, res: any) => {
 };
 api.post("/messages", manual);
 api.post("/whatsapp/send", manual);
+api.get("/whatsapp/status", async (_req, res) =>
+  res.json(await whatsappService.getConnectionStatus()),
+);
+api.get("/whatsapp/qr", async (_req, res) =>
+  res.json(await whatsappService.getQrCode()),
+);
+api.post("/whatsapp/connect", async (_req, res) => {
+  if (!env.EVOLUTION_WEBHOOK_SECRET)
+    throw new AppError(503, "Evolution webhook secret is not configured");
+  const webhook = new URL("/api/whatsapp/webhook", env.PUBLIC_API_URL);
+  webhook.searchParams.set("token", env.EVOLUTION_WEBHOOK_SECRET);
+  await whatsappService.connect(webhook.toString());
+  res.json({ connected: true });
+});
 api.get("/leads", async (req, res) =>
   res.json(
     await db.lead.findMany({
@@ -324,14 +339,16 @@ api.get("/settings/:type", async (req, res) => {
     res.json(await db.aISettings.findUnique({ where: { id: "singleton" } }));
   else if (req.params.type === "whatsapp")
     res.json({
+      provider: "Evolution Go",
       mockMode: env.MOCK_MODE,
       geminiConfigured: !!env.GEMINI_API_KEY,
       whatsappConfigured: !!(
-        env.WHATSAPP_ACCESS_TOKEN &&
-        env.WHATSAPP_PHONE_NUMBER_ID &&
-        env.WHATSAPP_APP_SECRET
+        env.EVOLUTION_API_URL &&
+        env.EVOLUTION_INSTANCE_TOKEN &&
+        env.EVOLUTION_WEBHOOK_SECRET
       ),
-      graphVersion: env.WHATSAPP_GRAPH_VERSION,
+      apiUrl: env.EVOLUTION_API_URL,
+      instanceName: env.EVOLUTION_INSTANCE_NAME || "Instance token configured",
       model: env.GEMINI_MODEL,
       webhookPath: "/api/whatsapp/webhook",
     });

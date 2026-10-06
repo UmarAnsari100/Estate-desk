@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createHmac } from "node:crypto";
 import request from "supertest";
 import { app } from "../src/app.js";
 import {
-  verifyChallenge,
-  validSignature,
+  extractEvolutionMessages,
+  validEvolutionWebhookSecret,
 } from "../src/controllers/webhook.controller.js";
 import { propertyWhere } from "../src/services/property.service.js";
 import { nonNullLead } from "../src/services/lead.service.js";
@@ -16,6 +15,8 @@ import {
   mockAnalysis,
   mockConversationAnalysis,
   greetingAnalysis,
+  farewellAnalysis,
+  courtesyAnalysis,
 } from "../src/services/gemini.service.js";
 import {
   renderNoMatchResponse,
@@ -26,64 +27,113 @@ import { WhatsAppService } from "../src/services/whatsapp.service.js";
 import { db } from "../src/repositories/db.js";
 import {
   asksForPaymentPlan,
+  asksForAnotherOption,
+  paymentPlanImageUrl,
+  projectInventoryQuery,
+  clearsBudget,
   asksForPropertyDetails,
+  standalonePropertyType,
+  normalizePropertyReference,
+  resolvePropertyReference,
   startsNewSearch,
 } from "../src/services/ai-orchestrator.service.js";
+import {
+  databaseSafeDisplayName,
+  databaseSafeText,
+} from "../src/utils/text.js";
 describe("Webhook verification", () => {
-  it("returns the challenge only for a matching subscribe token", () => {
-    expect(
-      verifyChallenge(
-        {
-          "hub.mode": "subscribe",
-          "hub.verify_token": "abc",
-          "hub.challenge": "123",
-        },
-        "abc",
-      ),
-    ).toBe("123");
-    expect(
-      verifyChallenge(
-        {
-          "hub.mode": "subscribe",
-          "hub.verify_token": "wrong",
-          "hub.challenge": "123",
-        },
-        "abc",
-      ),
-    ).toBeNull();
-    expect(
-      verifyChallenge(
-        {
-          "hub.mode": "other",
-          "hub.verify_token": "abc",
-          "hub.challenge": "123",
-        },
-        "abc",
-      ),
-    ).toBeNull();
+  it("removes unsupported supplementary characters before database writes", () => {
+    expect(databaseSafeText("Hello 👋 from EstateDesk")).toBe(
+      "Hello  from EstateDesk",
+    );
   });
-  it("validates raw bytes and rejects tampering", () => {
-    const raw = Buffer.from('{"entry":[]}');
-    const signature =
-      "sha256=" + createHmac("sha256", "secret").update(raw).digest("hex");
-    expect(validSignature(raw, signature, "secret")).toBe(true);
-    expect(validSignature(Buffer.from("{}"), signature, "secret")).toBe(false);
-    expect(validSignature(raw, "bad", "secret")).toBe(false);
+  it("prevents a non-Windows WhatsApp display name from rejecting its message", () => {
+    expect(databaseSafeDisplayName("محمد طیب✨")).toBe("");
+    expect(databaseSafeDisplayName("Tayyab — Sales")).toBe("Tayyab — Sales");
   });
-  it("serves the verification HTTP route", async () => {
-    await request(app)
-      .get(
-        "/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=test-verify&hub.challenge=789",
-      )
-      .expect(200, "789");
-    await request(app)
-      .get("/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=no")
-      .expect(403);
+  it("accepts the Evolution secret from the callback query or header", () => {
+    expect(validEvolutionWebhookSecret("secret", undefined, "secret")).toBe(
+      true,
+    );
+    expect(validEvolutionWebhookSecret(undefined, "secret", "secret")).toBe(
+      true,
+    );
+    expect(validEvolutionWebhookSecret("wrong", undefined, "secret")).toBe(
+      false,
+    );
+  });
+  it("extracts Evolution API and Evolution Go message payloads", () => {
+    expect(
+      extractEvolutionMessages({
+        event: "messages.upsert",
+        data: {
+          key: {
+            remoteJid: "923001234567@s.whatsapp.net",
+            fromMe: false,
+            id: "abc",
+          },
+          pushName: "Ali",
+          message: { extendedTextMessage: { text: "Hello" } },
+          messageTimestamp: 1700000000,
+        },
+      })[0],
+    ).toMatchObject({
+      id: "abc",
+      phone: "923001234567",
+      name: "Ali",
+      text: "Hello",
+    });
+    expect(
+      extractEvolutionMessages({
+        Info: {
+          ID: "go-1",
+          Sender: "923001234567@s.whatsapp.net",
+          PushName: "Ali",
+          IsFromMe: false,
+          Timestamp: "2026-09-28T10:00:00Z",
+        },
+        Message: { Conversation: "Hi from Go" },
+      })[0],
+    ).toMatchObject({ id: "go-1", phone: "923001234567", text: "Hi from Go" });
+    expect(
+      extractEvolutionMessages({
+        event: "MESSAGE",
+        data: {
+          Info: {
+            ID: "go-live-1",
+            Sender: "923001234567@s.whatsapp.net",
+            PushName: "Ali",
+            IsFromMe: false,
+          },
+          Message: { Conversation: "Hi" },
+          MessageType: "conversation",
+        },
+      })[0],
+    ).toMatchObject({
+      id: "go-live-1",
+      text: "Hi",
+      type: "text",
+    });
+    expect(
+      extractEvolutionMessages({
+        event: "MESSAGE",
+        data: {
+          Info: {
+            ID: "go-lid-swap",
+            Sender: "923001234567@s.whatsapp.net",
+            SenderAlt: "45325360357431@lid",
+            IsFromMe: false,
+          },
+          Message: { Conversation: "Hello" },
+          MessageType: "conversation",
+        },
+      })[0],
+    ).toMatchObject({ phone: "923001234567", type: "text" });
   });
   it("rejects unsigned webhook bodies", async () => {
     await request(app)
       .post("/api/whatsapp/webhook")
-      .send({ object: "whatsapp_business_account", entry: [] })
+      .send({ event: "MESSAGE" })
       .expect(401);
   });
 });
@@ -113,11 +163,42 @@ describe("Critical business rules", () => {
       "PROPERTY_SEARCH",
     );
   });
+  it.each(["Bye", "Goodbye 👋", "Allah Hafiz", "خدا حافظ"])(
+    "closes a standalone farewell %s without repeating inventory",
+    (text) => {
+      const result = farewellAnalysis(text);
+      expect(result).not.toBeNull();
+      expect(renderResponse(result!.language, "FAREWELL", [])).not.toMatch(
+        /PKR|PREVIEW|availability|listing/i,
+      );
+    },
+  );
+  it("does not treat a sentence containing bye as a standalone farewell", () => {
+    expect(farewellAnalysis("Bye the way, show me a house")).toBeNull();
+  });
+  it.each(["Thanks", "Thank you so much 😊", "Shukriya", "بہت شکریہ"])(
+    "handles standalone courtesy message %s without repeating inventory",
+    (text) => {
+      const result = courtesyAnalysis(text);
+      expect(result).not.toBeNull();
+      expect(renderResponse(result!.language, "THANKS", [])).not.toMatch(
+        /PKR|listing|availability/i,
+      );
+    },
+  );
   it("distinguishes a complete new search from a short follow-up", () => {
     expect(
       startsNewSearch("I need a 2-bedroom apartment in B-17 under 2 crore"),
     ).toBe(true);
     expect(startsNewSearch("1cr")).toBe(false);
+  });
+  it.each([
+    "I didn't tell you my budget",
+    "I never mentioned my budget",
+    "budget is not decided",
+    "maine budget nahi bataya",
+  ])("recognizes a request to clear stale budget: %s", (text) => {
+    expect(clearsBudget(text)).toBe(true);
   });
   it("extracts Pakistani shorthand and keeps sector and city distinct", () => {
     expect(mockAnalysis("5 marla plot in B-17 Islamabad").lead).toMatchObject({
@@ -152,6 +233,67 @@ describe("Critical business rules", () => {
       true,
     );
     expect(asksForPaymentPlan("Show me plots in B-17")).toBe(false);
+  });
+  it("recognizes requests for a different property without treating them as a new exact search", () => {
+    expect(asksForAnotherOption("Do you have any other option?")).toBe(true);
+    expect(asksForAnotherOption("kya ap k pass koi aur option ha")).toBe(true);
+    expect(asksForAnotherOption("Kya ap k pass koi or option ha?")).toBe(true);
+    expect(asksForAnotherOption("Or kon kon se options ha")).toBe(true);
+    expect(asksForAnotherOption("Or options ...")).toBe(true);
+    expect(asksForAnotherOption("show me a 5 marla plot")).toBe(false);
+  });
+  it("uses the company's published payment-plan image for installment replies", () => {
+    expect(
+      paymentPlanImageUrl({
+        images: [
+          "https://example.com/typeb.jpg",
+          "https://example.com/ideas_tower_payment_plan_b.jpg",
+        ],
+      }),
+    ).toContain("payment_plan_b.jpg");
+  });
+  it("treats company project names as inventory references instead of locations", () => {
+    expect(
+      projectInventoryQuery("Ideasone me 1 bedroom ki price kia hai"),
+    ).toBe("IG-ONE");
+    expect(projectInventoryQuery("2 bed in IDEAS Tower B")).toBe("IG-TOWER-B");
+    expect(projectInventoryQuery("Apartment in B-17")).toBeNull();
+  });
+  it("recognizes standalone property-type selections", () => {
+    expect(standalonePropertyType("plot")).toBe("PLOT");
+    expect(standalonePropertyType("Apartment?")).toBe("APARTMENT");
+    expect(standalonePropertyType("commercial")).toBe("COMMERCIAL");
+    expect(standalonePropertyType("5 marla apartment in B-17")).toBeNull();
+  });
+  it("resolves property codes with spaces and unique size-detail requests", () => {
+    const properties = [
+      {
+        propertyCode: "IG-ONE-2-BED-1400",
+        title: "IDEAS ONE 2 Bed Apartment — 1400 sq ft",
+        area: 1400,
+        areaUnit: "SQ_FT",
+      },
+      {
+        propertyCode: "IG-ONE-STUDIO-450",
+        title: "IDEAS ONE Studio Apartment — 450 sq ft",
+        area: 450,
+        areaUnit: "SQ_FT",
+      },
+    ];
+    expect(normalizePropertyReference("IG - ONE - 2 - BED - 1400")).toBe(
+      "IG-ONE-2-BED-1400",
+    );
+    expect(
+      resolvePropertyReference(
+        "IG - ONE - 2 - BED - 1400 IDEAS ONE 2 Bed",
+        properties,
+      )?.propertyCode,
+    ).toBe("IG-ONE-2-BED-1400");
+    expect(
+      resolvePropertyReference("I want 1400 sq ft details", properties)
+        ?.propertyCode,
+    ).toBe("IG-ONE-2-BED-1400");
+    expect(resolvePropertyReference("House", properties)).toBeNull();
   });
   it("explains a real no-match and labels the nearest published option", () => {
     const alternative = {
@@ -272,8 +414,10 @@ describe("Critical business rules", () => {
       "NONE",
       true,
     );
-    expect(preview).toContain("AVAILABILITY UNCONFIRMED");
+    expect(preview).toContain("Availability will be confirmed");
     expect(preview).toContain("IG-TOWER-B-B-1250");
+    expect(preview).not.toContain("SQ_FT");
+    expect(preview).not.toContain("0 bedrooms");
   });
   it("viewing response never confirms an appointment", () =>
     expect(renderResponse("English", "VIEWING", [])).toContain(
@@ -305,8 +449,16 @@ describe("Critical business rules", () => {
   });
 });
 describe("Provider errors and access control", () => {
+  it("explains when Evolution Go is not running", async () => {
+    const service = new WhatsAppService(
+      vi.fn().mockRejectedValue(new TypeError("fetch failed")),
+    );
+    await expect(
+      service.sendTextMessage("923001234567", "Hello"),
+    ).rejects.toThrow("Cannot connect to Evolution Go");
+  });
   it.each([401, 429, 500])(
-    "reports Meta HTTP %s without leaking provider body",
+    "reports Evolution Go HTTP %s without leaking provider body",
     async (status) => {
       const service = new WhatsAppService(
         vi
@@ -318,25 +470,56 @@ describe("Provider errors and access control", () => {
       ).rejects.toThrow(`HTTP ${status}`);
     },
   );
-  it("stores a successful Meta identifier", async () => {
+  it("stores a successful Evolution Go identifier", async () => {
     const service = new WhatsAppService(
       vi
         .fn()
-        .mockResolvedValue(Response.json({ messages: [{ id: "wamid.123" }] })),
+        .mockResolvedValue(
+          Response.json({ data: { Info: { ID: "evo.123" } } }),
+        ),
     );
     expect(await service.sendTextMessage("923001234567", "Hello")).toBe(
-      "wamid.123",
+      "evo.123",
     );
   });
   it("sanitizes recipient phone numbers by removing leading plus and spaces", async () => {
     let capturedBody = "";
     const service = new WhatsAppService(async (_url, options) => {
       capturedBody = options?.body as string;
-      return Response.json({ messages: [{ id: "wamid.clean" }] });
+      return Response.json({ data: { Info: { ID: "evo.clean" } } });
     });
     const id = await service.sendTextMessage("+92 300 1234567", "Hello");
-    expect(id).toBe("wamid.clean");
-    expect(JSON.parse(capturedBody).to).toBe("923001234567");
+    expect(id).toBe("evo.clean");
+    expect(JSON.parse(capturedBody).number).toBe("923001234567");
+  });
+  it("sends a public property image with its caption through Evolution Go", async () => {
+    let capturedUrl = "";
+    let capturedBody = "";
+    const service = new WhatsAppService(async (url, options) => {
+      capturedUrl = String(url);
+      capturedBody = options?.body as string;
+      return Response.json({ data: { Info: { ID: "evo.image" } } });
+    });
+    const id = await service.sendImageMessage(
+      "+92 300 1234567",
+      "https://example.com/apartment.jpg",
+      "Apartment details",
+    );
+    expect(id).toBe("evo.image");
+    expect(capturedUrl).toContain("/send/media");
+    expect(JSON.parse(capturedBody)).toMatchObject({
+      number: "923001234567",
+      type: "image",
+      url: "https://example.com/apartment.jpg",
+      caption: "Apartment details",
+      formatJid: true,
+    });
+  });
+  it("rejects non-HTTPS property image URLs", async () => {
+    const service = new WhatsAppService(vi.fn());
+    await expect(
+      service.sendImageMessage("923001234567", "http://example.com/a.jpg", "A"),
+    ).rejects.toThrow("public HTTPS URL");
   });
   it("handles non-JSON error bodies from provider safely", async () => {
     const service = new WhatsAppService(
@@ -432,7 +615,9 @@ describe("Comprehensive WhatsApp & NLP Edge Cases", () => {
       // Untrusted message is strictly treated as data
       expect(analysis.intent).toBeDefined();
       expect(typeof analysis.intent).toBe("string");
-      expect(JSON.stringify(analysis)).not.toContain("WHATSAPP_ACCESS_TOKEN");
+      expect(JSON.stringify(analysis)).not.toContain(
+        "EVOLUTION_INSTANCE_TOKEN",
+      );
       expect(JSON.stringify(analysis)).not.toContain("GEMINI_API_KEY");
     }
   });
@@ -443,49 +628,13 @@ describe("Comprehensive WhatsApp & NLP Edge Cases", () => {
     expect(analysis.intent).toBe("PROPERTY_SEARCH");
   });
 
-  it("validates signature rejects non-buffer input safely", () => {
-    expect(
-      validSignature(null as any, "sha256=" + "a".repeat(64), "secret"),
-    ).toBe(false);
-    expect(
-      validSignature({} as any, "sha256=" + "a".repeat(64), "secret"),
-    ).toBe(false);
-    expect(
-      validSignature(undefined as any, "sha256=" + "a".repeat(64), "secret"),
-    ).toBe(false);
-  });
-
-  it("webhook challenge rejects missing, wrong mode, or array queries", () => {
-    expect(verifyChallenge({}, "secret")).toBeNull();
-    expect(
-      verifyChallenge(
-        {
-          "hub.mode": "other",
-          "hub.verify_token": "secret",
-          "hub.challenge": "1",
-        },
-        "secret",
-      ),
-    ).toBeNull();
-    expect(
-      verifyChallenge(
-        {
-          "hub.mode": "subscribe",
-          "hub.verify_token": "wrong",
-          "hub.challenge": "1",
-        },
-        "secret",
-      ),
-    ).toBeNull();
-    expect(
-      verifyChallenge(
-        {
-          "hub.mode": "subscribe",
-          "hub.verify_token": "secret",
-          "hub.challenge": ["1", "2"] as any,
-        },
-        "secret",
-      ),
-    ).toBeNull();
+  it("rejects missing and non-string Evolution webhook secrets", () => {
+    expect(validEvolutionWebhookSecret(undefined, undefined, "secret")).toBe(
+      false,
+    );
+    expect(validEvolutionWebhookSecret(["secret"], undefined, "secret")).toBe(
+      false,
+    );
+    expect(validEvolutionWebhookSecret("", undefined, "secret")).toBe(false);
   });
 });

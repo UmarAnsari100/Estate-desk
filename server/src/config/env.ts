@@ -16,16 +16,13 @@ export const env = z
       .default("false")
       .transform((v) => v === "true"),
     GEMINI_API_KEY: z.string().default(""),
-    GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
-    WHATSAPP_ACCESS_TOKEN: z.string().default(""),
-    WHATSAPP_PHONE_NUMBER_ID: z.string().default(""),
-    WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().default(""),
-    WHATSAPP_VERIFY_TOKEN: z.string().default(""),
-    WHATSAPP_APP_SECRET: z.string().default(""),
-    WHATSAPP_GRAPH_VERSION: z
-      .string()
-      .regex(/^v\d+\.\d+$/)
-      .default("v23.0"),
+    GEMINI_MODEL: z.string().default("gemini-3.1-flash-lite"),
+    EVOLUTION_API_URL: z.string().url().default("http://localhost:8080"),
+    EVOLUTION_GLOBAL_API_KEY: z.string().default(""),
+    EVOLUTION_INSTANCE_TOKEN: z.string().default(""),
+    EVOLUTION_INSTANCE_NAME: z.string().default(""),
+    EVOLUTION_WEBHOOK_SECRET: z.string().default(""),
+    PUBLIC_API_URL: z.string().url().default("http://localhost:3001"),
   })
   .parse(process.env);
 if (env.NODE_ENV === "production") {
@@ -37,18 +34,12 @@ if (env.NODE_ENV === "production") {
       "JWT_SECRET must be a secure random secret of at least 32 characters in production",
     );
   }
-  if (!env.WHATSAPP_APP_SECRET) {
-    throw new Error("WHATSAPP_APP_SECRET is required in production");
-  }
-  if (!env.WHATSAPP_ACCESS_TOKEN) {
-    throw new Error("WHATSAPP_ACCESS_TOKEN is required in production");
-  }
-  if (!env.WHATSAPP_PHONE_NUMBER_ID) {
-    throw new Error("WHATSAPP_PHONE_NUMBER_ID is required in production");
-  }
-  if (!env.WHATSAPP_VERIFY_TOKEN) {
-    throw new Error("WHATSAPP_VERIFY_TOKEN is required in production");
-  }
+  if (!env.EVOLUTION_INSTANCE_TOKEN)
+    throw new Error("EVOLUTION_INSTANCE_TOKEN is required in production");
+  if (env.EVOLUTION_WEBHOOK_SECRET.length < 24)
+    throw new Error(
+      "EVOLUTION_WEBHOOK_SECRET must be at least 24 characters in production",
+    );
   if (!env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is required in production");
   }
